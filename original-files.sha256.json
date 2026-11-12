@@ -1,0 +1,38 @@
+﻿[
+    {
+        "Path":  ".gitignore",
+        "Hash":  "6036790581C1A32ACA30D0662FAEE97D0EB9093827791DA08D562163AE077C85"
+    },
+    {
+        "Path":  "LoLCorePin.sln",
+        "Hash":  "C4C854BC8E12E5EE34BE6FE944A9F3D7FB0FDCF3A9860B4641AEB9CFC7639C80"
+    },
+    {
+        "Path":  "src\\LoLCorePin\\app.manifest",
+        "Hash":  "B029F3E0EE6C52EEE6FAF507C3F75BFD575CA73EF825F4D6573EB907DDC91C03"
+    },
+    {
+        "Path":  "src\\LoLCorePin\\LoLCorePin.csproj",
+        "Hash":  "1ACAF1D21C3D86ABB17B1C0CFC592BC563E20C7152B4377E5BDA32DD1876BDEE"
+    },
+    {
+        "Path":  "src\\LoLCorePin\\Models\\CpuInfo.cs",
+        "Hash":  "E1C443B2F94BBE671C432224CF6F6AAF39E970AB1F541AF60D7D54E101008C98"
+    },
+    {
+        "Path":  "src\\LoLCorePin\\Models\\TargetRule.cs",
+        "Hash":  "7056E196675385E281B5EE39AA20E7B23DB1AD91C5D5B9828283A231FC4BDEBB"
+    },
+    {
+        "Path":  "src\\LoLCorePin\\Native\\NativeMethods.cs",
+        "Hash":  "E5A69796C6F9CC4604C6FFE9C02A33C4C37516A6D38AA5EA69F16C2BA6043921"
+    },
+    {
+        "Path":  "src\\LoLCorePin\\Services\\CpuTopologyService.cs",
+        "Hash":  "3695007D611A9233B57A4CF9C2A71AA12F55E7116EEB92EADDAEF05BDB0D9897"
+    },
+    {
+        "Path":  "src\\LoLCorePin\\Services\\ProcessCatalog.cs",
+        "Hash":  "48A16C6861DC80AC2534210E58F166B00EBA29100CC8476A65DDA5BF13605180"
+    }
+]

@@ -1,0 +1,131 @@
+<Window x:Class="LoLCorePin.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="LoLCorePin · 英雄联盟性能核助手" Width="1160" Height="860"
+        MinWidth="960" MinHeight="780" WindowStartupLocation="CenterScreen" Closing="Window_Closing">
+  <Grid Margin="24">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+    <DockPanel Margin="0,0,0,18">
+      <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+        <CheckBox x:Name="AutoPinBox" Content="自动绑定" Checked="AutoPin_Changed" Unchecked="AutoPin_Changed" ToolTip="每 500ms 检查并修复目标进程设置"/>
+        <Button x:Name="ApplyButton" Content="立即应用" Style="{StaticResource PrimaryButton}" Click="Apply_Click"/>
+      </StackPanel>
+      <StackPanel>
+        <TextBlock Text="LoLCorePin" FontSize="27" FontWeight="Bold"/>
+        <TextBlock Text="英雄联盟性能核助手  /  v1.0" Foreground="{StaticResource Muted}" Margin="0,4,0,0"/>
+      </StackPanel>
+    </DockPanel>
+    <Border Grid.Row="1" Background="White" BorderBrush="#D5E0E7" BorderThickness="1" CornerRadius="8" Padding="18" Margin="0,0,0,16">
+      <StackPanel>
+        <TextBlock Text="{Binding Status}" FontSize="18" FontWeight="SemiBold"/>
+        <TextBlock Text="{Binding Policy}" Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,6,0,8"/>
+        <DataGrid x:Name="StatusGrid" ItemsSource="{Binding Processes}" IsReadOnly="True" MaxHeight="170" RowDetailsVisibilityMode="VisibleWhenSelected">
+          <DataGrid.Columns>
+            <DataGridTextColumn Header="进程 / LOL 游戏" Binding="{Binding Name}" Width="190"/>
+            <DataGridTextColumn Header="PID" Binding="{Binding Id}" Width="65"/>
+            <DataGridTextColumn Header="验证结果" Binding="{Binding Status}" Width="125"/>
+            <DataGridTextColumn Header="当前 CPU Sets" Binding="{Binding CpuSets}" Width="*"/>
+            <DataGridTextColumn Header="当前亲和性" Binding="{Binding Affinity}" Width="160"/>
+          </DataGrid.Columns>
+          <DataGrid.RowDetailsTemplate>
+            <DataTemplate>
+              <StackPanel Margin="12,8" MaxWidth="760">
+                <TextBlock Text="{Binding Qos}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                <TextBlock Text="{Binding Detail}" TextWrapping="Wrap" Foreground="#9A3C14" Margin="0,4,0,0">
+                  <TextBlock.Style><Style TargetType="TextBlock"><Style.Triggers>
+                    <DataTrigger Binding="{Binding Detail}" Value=""><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
+                  </Style.Triggers></Style></TextBlock.Style>
+                </TextBlock>
+                <TextBlock Text="{Binding CpuSets}" TextWrapping="Wrap" Foreground="{StaticResource Muted}" Margin="0,4,0,0"/>
+              </StackPanel>
+            </DataTemplate>
+          </DataGrid.RowDetailsTemplate>
+        </DataGrid>
+        <TextBlock Text="选择进程行可查看 EcoQoS、完整 CPU Sets 和错误详情。" FontSize="12" Foreground="{StaticResource Muted}" Margin="0,8,0,0"/>
+      </StackPanel>
+    </Border>
+    <TabControl Grid.Row="2">
+      <TabItem Header="核心策略">
+        <Grid Margin="14">
+          <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+          <StackPanel>
+            <TextBlock Text="{Binding TopologyText}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+            <TextBlock Text="逻辑编号和物理核心编号都以处理器组为单位；自动模式保留所选核心的全部 SMT 线程。" TextWrapping="Wrap" Foreground="{StaticResource Muted}" Margin="0,6,0,10"/>
+          </StackPanel>
+          <DockPanel Grid.Row="1" Margin="0,0,0,10">
+            <Button DockPanel.Dock="Right" Content="刷新拓扑" Click="RefreshTopology_Click"/>
+            <CheckBox x:Name="ManualBox" Content="手动选择逻辑处理器" IsChecked="{Binding ManualMode}" Checked="ManualMode_Changed" Unchecked="ManualMode_Changed"/>
+          </DockPanel>
+          <DataGrid x:Name="CoreGrid" Grid.Row="2" ItemsSource="{Binding Cpus}" IsReadOnly="False">
+            <DataGrid.Columns>
+              <DataGridTemplateColumn Header="选中" Width="65">
+                <DataGridTemplateColumn.CellTemplate><DataTemplate>
+                  <CheckBox IsChecked="{Binding Selected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                            IsEnabled="{Binding DataContext.ManualMode, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                            Margin="8,0,0,0" AutomationProperties.Name="选择此逻辑处理器"/>
+                </DataTemplate></DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+              <DataGridTextColumn Header="逻辑处理器" Binding="{Binding Cpu.LogicalLabel}" IsReadOnly="True" Width="145"/>
+              <DataGridTextColumn Header="核心编号" Binding="{Binding Cpu.CoreIndex}" IsReadOnly="True" Width="90"/>
+              <DataGridTextColumn Header="EfficiencyClass" Binding="{Binding Cpu.EfficiencyClass}" IsReadOnly="True" Width="125"/>
+              <DataGridTextColumn Header="检测分类" Binding="{Binding Kind}" IsReadOnly="True" Width="150"/>
+              <DataGridTextColumn Header="CPU Set ID" Binding="{Binding Cpu.Id}" IsReadOnly="True" Width="100"/>
+              <DataGridTextColumn Header="可用状态" Binding="{Binding Cpu.Availability}" IsReadOnly="True" Width="*"/>
+            </DataGrid.Columns>
+          </DataGrid>
+          <DockPanel Grid.Row="3" Margin="0,12,0,0">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+              <Button Content="全选" Click="SelectAll_Click"/>
+              <Button Content="恢复推荐" Click="Recommended_Click"/>
+              <Button Content="保存核心策略" Style="{StaticResource PrimaryButton}" Click="SaveCores_Click"/>
+            </StackPanel>
+            <TextBlock Text="{Binding SelectedSummary}" TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,10,0"/>
+          </DockPanel>
+        </Grid>
+      </TabItem>
+      <TabItem Header="进程与启动">
+        <Grid Margin="14">
+          <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+          <TextBlock Text="从 WeGame 启动后，在实际对局或训练模式中查找游戏进程。精确匹配文件名（不区分大小写），不依据启动器或快捷方式名称。" TextWrapping="Wrap" Margin="0,0,0,12"/>
+          <DataGrid x:Name="TargetGrid" Grid.Row="1" ItemsSource="{Binding Targets}">
+            <DataGrid.Columns>
+              <DataGridTemplateColumn Header="启用" Width="65"><DataGridTemplateColumn.CellTemplate><DataTemplate>
+                <CheckBox IsChecked="{Binding Enabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="8,0,0,0" AutomationProperties.Name="启用此进程规则"/>
+              </DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
+              <DataGridTextColumn Header="进程文件名（可编辑）" Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Width="*"/>
+            </DataGrid.Columns>
+          </DataGrid>
+          <DockPanel Grid.Row="2" Margin="0,12,0,12">
+            <Button DockPanel.Dock="Right" Content="查找正在运行的进程…" Click="Discover_Click"/>
+            <Button DockPanel.Dock="Right" Content="移除选中" Click="RemoveTarget_Click"/>
+            <Button DockPanel.Dock="Right" Content="添加" Click="AddTarget_Click"/>
+            <TextBox x:Name="NewTargetBox" Margin="0,0,8,0" ToolTip="输入进程文件名，例如 League of Legends.exe" AutomationProperties.Name="新进程文件名"/>
+          </DockPanel>
+          <DockPanel Grid.Row="3" Margin="0,0,0,12">
+            <Button DockPanel.Dock="Right" Content="保存监视列表" Style="{StaticResource PrimaryButton}" Click="SaveTargets_Click"/>
+            <TextBlock Text="默认只启用游戏本体；客户端可按需开启。列表编辑只在保存后生效。" Foreground="{StaticResource Muted}" TextWrapping="Wrap" VerticalAlignment="Center"/>
+          </DockPanel>
+          <StackPanel Grid.Row="4">
+            <CheckBox x:Name="StartupBox" Content="登录 Windows 后启动（仅当前用户，启动时隐藏到托盘）" Checked="Startup_Changed" Unchecked="Startup_Changed"/>
+            <TextBlock Text="建议先发布到固定目录，再启用开机启动。关闭窗口会隐藏到托盘；右键托盘图标可退出。" Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,4,0,0"/>
+          </StackPanel>
+        </Grid>
+      </TabItem>
+      <TabItem Header="日志与说明">
+        <Grid Margin="14">
+          <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+          <TextBlock Text="每 500ms 检查，发现设置被重置后重新应用。日志只记录状态变化，最多保留本次运行的 250 条。暂停自动绑定或退出会停止后续修改；已经应用的进程设置保留到进程退出或被其他程序修改。" TextWrapping="Wrap" Foreground="{StaticResource Muted}" Margin="0,0,0,12"/>
+          <ListBox Grid.Row="1" ItemsSource="{Binding Logs}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+            <ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" TextWrapping="Wrap" Padding="4,5"/></DataTemplate></ListBox.ItemTemplate>
+          </ListBox>
+        </Grid>
+      </TabItem>
+    </TabControl>
+    <StackPanel Grid.Row="3" Margin="0,12,0,0">
+      <TextBlock Text="{Binding Notice}" Foreground="#9A3C14" TextWrapping="Wrap"/>
+      <TextBlock Text="{Binding LastCheck}" FontSize="12" Foreground="{StaticResource Muted}" Margin="0,5,0,0"/>
+    </StackPanel>
+  </Grid>
+</Window>

@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../src/LoLCorePin/Models/CpuInfo.cs" Link="Models/CpuInfo.cs"/>
+    <Compile Include="../../src/LoLCorePin/Models/TargetRule.cs" Link="Models/TargetRule.cs"/>
+    <Compile Include="../../src/LoLCorePin/Models/ProcessReport.cs" Link="Models/ProcessReport.cs"/>
+    <Compile Include="../../src/LoLCorePin/Native/NativeMethods.cs" Link="Native/NativeMethods.cs"/>
+    <Compile Include="../../src/LoLCorePin/Services/CpuTopologyService.cs" Link="Services/CpuTopologyService.cs"/>
+    <Compile Include="../../src/LoLCorePin/Services/ProcessCatalog.cs" Link="Services/ProcessCatalog.cs"/>
+    <Compile Include="../../src/LoLCorePin/Services/ProcessTuner.cs" Link="Services/ProcessTuner.cs"/>
+    <Compile Include="../../src/LoLCorePin/Services/ProcessWatcher.cs" Link="Services/ProcessWatcher.cs"/>
+    <Compile Include="../../src/LoLCorePin/Services/ErrorText.cs" Link="Services/ErrorText.cs"/>
+  </ItemGroup>
+</Project>
