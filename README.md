@@ -6,7 +6,7 @@ Windows 10/11 x64 游戏进程性能核绑定工具，使用 C# / .NET 8 WPF 独
 
 ## 安装和运行
 
-使用项目提供的 `CorePin-win-x64.zip` 时，将**整个压缩包**解压到固定的可写目录，再运行 `CorePin.exe`。自包含包附带 .NET / Windows Desktop 运行组件，不要求目标电脑另装 .NET；不要单独复制 EXE 或丢弃旁边的 DLL。此仓库提供构建及发布流程，不表示已经发布了可下载的版本。现有仓库地址为 [441126098/LoLCorePin](https://github.com/441126098/LoLCorePin)。
+使用项目提供的 `CorePin-win-x64.zip` 时，将**整个压缩包**解压到固定的可写目录，再运行 `CorePin.exe`。自包含包附带 .NET / Windows Desktop 运行组件，不要求目标电脑另装 .NET；不要单独复制 EXE 或丢弃旁边的 DLL。此仓库提供构建及发布流程，不表示已经发布了可下载的版本。仓库地址为 [441126098/CorePin](https://github.com/441126098/CorePin)。
 
 发布包附带 `.zip.sha256` 文件，包内 `SHA256SUMS.txt` 列出每个文件的 SHA-256。可用 PowerShell 的 `Get-FileHash .\CorePin-win-x64.zip -Algorithm SHA256` 与旁边的清单比对。校验和用于核对完整性，不代表发布者身份认证。
 

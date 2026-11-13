@@ -8,7 +8,7 @@
 | `StartupService` | HKCU Run 的 `LoLCorePin` 值名 | 启动时仅查询。只有用户明确操作“登录 Windows 后启动”时才删除旧值，并按用户选择写入 `CorePin` 或同时删除两个工具值。 |
 | `App` | `Local\LoLCorePin.Desktop.v1` | 与旧版共享单实例锁，防止两个版本同时轮询并覆盖进程设置。冲突提示中的旧名称用于识别旧实例。 |
 | 测试 | 旧目录、值名和示例 EXE | 仅用于隔离临时目录及内存注册表测试。 |
-| README 仓库链接 | `441126098/LoLCorePin` | 现有 GitHub 地址；仓库及本地顶层目录未更名。 |
+| GitHub 仓库 | 旧地址 `441126098/LoLCorePin` | 已更名为 [441126098/CorePin](https://github.com/441126098/CorePin)；旧地址会重定向到新仓库。 |
 
 ## 设置与启动项
 
