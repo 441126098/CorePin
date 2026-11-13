@@ -1,0 +1,33 @@
+name: Build and checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Build Release
+        run: dotnet build .\CorePin.sln -c Release --artifacts-path .\artifacts\ci-build
+      - name: Managed checks
+        run: dotnet .\artifacts\ci-build\bin\CorePin.Checks\release\CorePin.Checks.dll
+      - name: Native checks (own process only)
+        run: dotnet .\artifacts\ci-build\bin\CorePin.Checks\release\CorePin.Checks.dll --native
+      - name: Source and UTF-8 checks
+        shell: powershell
+        run: |
+          & .\scripts\Check-Source.ps1
+          & .\scripts\Test-Text.ps1

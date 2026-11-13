@@ -1,0 +1,31 @@
+<UserControl x:Class="CorePin.Controls.CoreChip"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <StackPanel Margin="2,0">
+    <CheckBox IsChecked="{Binding Selected, Mode=TwoWay}" Click="Chip_Click" Width="38" Height="38"
+              AutomationProperties.Name="{Binding Cpu.LogicalLabel, StringFormat='选择 {0}；查看核心详情'}">
+      <CheckBox.Template>
+        <ControlTemplate TargetType="CheckBox">
+          <Border x:Name="Tile" Background="#F4BF24" BorderBrush="#CA9813" BorderThickness="1" CornerRadius="7">
+            <Grid>
+              <Border x:Name="Box" Width="13" Height="13" Background="White" BorderBrush="#BBC5D6" BorderThickness="1" CornerRadius="3" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="3">
+                <TextBlock x:Name="Tick" Text="✓" Visibility="Collapsed" Foreground="White" FontWeight="Bold" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-2,0,0"/>
+              </Border>
+              <UniformGrid Rows="2" Columns="2" Width="14" Height="14" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,5,6">
+                <Rectangle x:Name="Upper1" Fill="#203E83" RadiusX="1" RadiusY="1" Margin="0,0,1,1"/><Rectangle x:Name="Upper2" Fill="#203E83" RadiusX="1" RadiusY="1" Margin="0,0,1,1"/>
+                <Rectangle x:Name="Lower1" Fill="#203E83" RadiusX="1" RadiusY="1" Margin="0,0,1,1"/><Rectangle x:Name="Lower2" Fill="#203E83" RadiusX="1" RadiusY="1" Margin="0,0,1,1"/>
+              </UniformGrid>
+            </Grid>
+          </Border>
+          <ControlTemplate.Triggers>
+            <DataTrigger Binding="{Binding IsPerformance}" Value="False"><Setter TargetName="Tile" Property="Background" Value="#ECEFF3"/><Setter TargetName="Tile" Property="BorderBrush" Value="#A4AEBD"/><Setter TargetName="Upper1" Property="Visibility" Value="Hidden"/><Setter TargetName="Upper2" Property="Visibility" Value="Hidden"/><Setter TargetName="Lower1" Property="Fill" Value="#838E9D"/><Setter TargetName="Lower2" Property="Fill" Value="#838E9D"/></DataTrigger>
+            <Trigger Property="IsChecked" Value="True"><Setter TargetName="Box" Property="Background" Value="#203E83"/><Setter TargetName="Box" Property="BorderBrush" Value="#203E83"/><Setter TargetName="Tick" Property="Visibility" Value="Visible"/></Trigger>
+            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Tile" Property="Opacity" Value="0.8"/></Trigger>
+            <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Tile" Property="BorderBrush" Value="#203E83"/><Setter TargetName="Tile" Property="BorderThickness" Value="2"/></Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </CheckBox.Template>
+    </CheckBox>
+    <TextBlock x:Name="Number" Text="{Binding Cpu.LogicalIndex}" FontSize="9" Foreground="#5E6879" HorizontalAlignment="Center" Visibility="Collapsed" Margin="0,3,0,0"/>
+  </StackPanel>
+</UserControl>

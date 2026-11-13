@@ -1,0 +1,12 @@
+<Window x:Class="CorePin.CloseToTrayWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="关闭后继续在后台运行" Style="{StaticResource {x:Type Window}}" Width="430" SizeToContent="Height" ResizeMode="NoResize" WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
+  <StackPanel Margin="24">
+    <TextBlock Text="关闭后继续在后台运行" FontSize="18" FontWeight="SemiBold"/>
+    <TextBlock Text="关闭窗口后，CorePin 会继续在托盘中监视游戏并自动绑定。你可以从托盘重新打开窗口，或右键选择退出。" TextWrapping="Wrap" Foreground="{StaticResource Muted}" Margin="0,12,0,18" LineHeight="20"/>
+    <CheckBox x:Name="RememberBox" Content="不再提示"/>
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+      <Button Content="退出程序" Click="Exit_Click" Margin="0,0,8,0"/>
+      <Button Content="最小化到托盘" Style="{StaticResource PrimaryButton}" IsDefault="True" Click="Tray_Click"/>
+    </StackPanel>
+  </StackPanel>
+</Window>

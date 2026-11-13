@@ -1,14 +1,14 @@
-param([string]$ProjectRoot = (Split-Path -Parent $PSScriptRoot))
+﻿param([string]$ProjectRoot = (Split-Path -Parent $PSScriptRoot))
 $ErrorActionPreference = 'Stop'
 
 # Does not install software, open program files, or change any process/system setting.
-$xmlFiles = Get-ChildItem -LiteralPath $ProjectRoot -File -Recurse | Where-Object { $_.Extension -in '.xaml','.csproj','.manifest' }
+$xmlFiles = Get-ChildItem -LiteralPath (Join-Path $ProjectRoot 'src'),(Join-Path $ProjectRoot 'tests') -File -Recurse | Where-Object { $_.FullName -notmatch '\\(bin|obj)\\' -and $_.Extension -in '.xaml','.csproj','.manifest' }
 foreach ($file in $xmlFiles) { [xml]$null = Get-Content -LiteralPath $file.FullName -Raw -Encoding UTF8 }
 Write-Output ('XML_OK: ' + $xmlFiles.Count + ' XAML/project/manifest files')
 
-$native = Get-Content -LiteralPath (Join-Path $ProjectRoot 'src\LoLCorePin\Native\NativeMethods.cs') -Raw -Encoding UTF8
+$native = Get-Content -LiteralPath (Join-Path $ProjectRoot 'src\CorePin\Native\NativeMethods.cs') -Raw -Encoding UTF8
 $probe = @'
-namespace LoLCorePin.Native
+namespace CorePin.Native
 {
     public static class ReadOnlyProbe
     {
@@ -75,12 +75,12 @@ namespace LoLCorePin.Native
 }
 '@
 Add-Type -TypeDefinition ($native + [Environment]::NewLine + $probe)
-[LoLCorePin.Native.ReadOnlyProbe]::Run()
+[CorePin.Native.ReadOnlyProbe]::Run()
 
-$sources = Get-ChildItem -LiteralPath (Join-Path $ProjectRoot 'src\LoLCorePin') -Filter '*.cs' -File -Recurse
+$sources = Get-ChildItem -LiteralPath (Join-Path $ProjectRoot 'src\CorePin') -Filter '*.cs' -File -Recurse | Where-Object { $_.FullName -notmatch '\\(bin|obj)\\' }
 $sourceText = ($sources | ForEach-Object { Get-Content -LiteralPath $_.FullName -Raw -Encoding UTF8 }) -join [Environment]::NewLine
-$events = @('Click','Checked','Unchecked','Closing','TextChanged','MouseDoubleClick')
-foreach ($xamlFile in (Get-ChildItem -LiteralPath (Join-Path $ProjectRoot 'src\LoLCorePin') -Filter '*.xaml')) {
+$events = @('Click','Checked','Unchecked','Closing','SourceInitialized','TextChanged','MouseDoubleClick')
+foreach ($xamlFile in (Get-ChildItem -LiteralPath (Join-Path $ProjectRoot 'src\CorePin') -Filter '*.xaml')) {
     [xml]$doc = Get-Content -LiteralPath $xamlFile.FullName -Raw -Encoding UTF8
     foreach ($attribute in $doc.SelectNodes('//@*')) {
         if ($attribute.LocalName -in $events -and $sourceText -notmatch ('\b' + [regex]::Escape($attribute.Value) + '\s*\(')) {
