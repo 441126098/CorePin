@@ -12,6 +12,55 @@ public sealed record ProcessItem(uint Id, string Name, uint ParentId);
 
 public static class ProcessCatalog
 {
+    // Keep one native entry/name buffer per poll. The marshaller's string field in
+    // ProcessEntry otherwise creates an executable-name string for every process.
+    // Offsets come from the existing ABI layout used by the read-only smoke check.
+    private static readonly int EntrySize = Marshal.SizeOf<NativeMethods.ProcessEntry>();
+    private static readonly int NameOffset = (int)Marshal.OffsetOf<NativeMethods.ProcessEntry>(nameof(NativeMethods.ProcessEntry.ExeFile));
+    private static readonly int IdOffset = (int)Marshal.OffsetOf<NativeMethods.ProcessEntry>(nameof(NativeMethods.ProcessEntry.ProcessId));
+    private static readonly int ParentOffset = (int)Marshal.OffsetOf<NativeMethods.ProcessEntry>(nameof(NativeMethods.ProcessEntry.ParentProcessId));
+
+    internal static ProcessItem[] FindTargets(HashSet<string> names, uint? onlyProcessId, out int gameProcessCount)
+    {
+        using var snapshot = NativeMethods.CreateToolhelp32Snapshot(2, 0);
+        if (snapshot.IsInvalid) throw new Win32Exception(Marshal.GetLastWin32Error());
+        var lookup = names.GetAlternateLookup<ReadOnlySpan<char>>();
+        var nameBuffer = new char[260];
+        IntPtr entry = Marshal.AllocHGlobal(EntrySize);
+        List<ProcessItem>? targets = null;
+        gameProcessCount = 0;
+        try
+        {
+            Marshal.WriteInt32(entry, EntrySize);
+            if (!NativeMethods.Process32FirstBuffer(snapshot, entry))
+            {
+                int error = Marshal.GetLastWin32Error();
+                if (error == NativeMethods.ErrorNoMoreFiles) return Array.Empty<ProcessItem>();
+                throw new Win32Exception(error);
+            }
+            do
+            {
+                uint id = unchecked((uint)Marshal.ReadInt32(entry, IdOffset));
+                if (id != 0)
+                {
+                    Marshal.Copy(IntPtr.Add(entry, NameOffset), nameBuffer, 0, nameBuffer.Length);
+                    int length = Array.IndexOf(nameBuffer, '\0');
+                    var name = nameBuffer.AsSpan(0, length < 0 ? nameBuffer.Length : length);
+                    // Game detection is independent of enabled rules and the test PID restriction.
+                    if (name.Equals("League of Legends.exe", StringComparison.OrdinalIgnoreCase)) gameProcessCount++;
+                    if ((onlyProcessId == null || id == onlyProcessId) && lookup.Contains(name))
+                        (targets ??= new()).Add(new ProcessItem(id, new string(name),
+                            unchecked((uint)Marshal.ReadInt32(entry, ParentOffset))));
+                }
+                Marshal.WriteInt32(entry, EntrySize);
+            } while (NativeMethods.Process32NextBuffer(snapshot, entry));
+            int lastError = Marshal.GetLastWin32Error();
+            if (lastError != NativeMethods.ErrorNoMoreFiles) throw new Win32Exception(lastError);
+            return targets?.ToArray() ?? Array.Empty<ProcessItem>();
+        }
+        finally { Marshal.FreeHGlobal(entry); }
+    }
+
     public static IReadOnlyList<ProcessItem> Enumerate()
     {
         using var snapshot = NativeMethods.CreateToolhelp32Snapshot(2, 0); // TH32CS_SNAPPROCESS

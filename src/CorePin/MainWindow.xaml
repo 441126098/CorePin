@@ -1,187 +1,257 @@
-<Window x:Class="CorePin.MainWindow"
+﻿<Window x:Class="CorePin.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
-        Title="CorePin" Style="{StaticResource {x:Type Window}}" Width="920" SizeToContent="Height" MinWidth="860" MinHeight="375"
+        Title="CorePin" Style="{StaticResource {x:Type Window}}"
+        Width="920" Height="740" MinWidth="920" MinHeight="740" SizeToContent="Manual"
         WindowStyle="None" ResizeMode="CanResize" WindowStartupLocation="CenterScreen"
         Closing="Window_Closing" SourceInitialized="Window_SourceInitialized">
   <shell:WindowChrome.WindowChrome>
     <shell:WindowChrome CaptionHeight="48" ResizeBorderThickness="5" GlassFrameThickness="0" CornerRadius="8" UseAeroCaptionButtons="False"/>
   </shell:WindowChrome.WindowChrome>
-  <Border BorderBrush="#CCD0D9" BorderThickness="1" CornerRadius="8" ClipToBounds="True">
-    <Grid>
-      <Grid.RowDefinitions><RowDefinition Height="48"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-      <Border BorderBrush="#DEE1E8" BorderThickness="0,0,0,1">
-        <Grid Margin="16,0,0,0">
-          <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-          <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-            <Image Source="{Binding Icon, RelativeSource={RelativeSource AncestorType=Window}}" Width="21" Height="21" Margin="0,0,8,0"/>
-            <TextBlock Text="CorePin" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center"/>
-          </StackPanel>
-          <StackPanel Grid.Column="2" Orientation="Horizontal" shell:WindowChrome.IsHitTestVisibleInChrome="True">
-            <CheckBox x:Name="AutoPinBox" Content="自动绑定" Style="{StaticResource Switch}" FontSize="13" FontWeight="SemiBold" Margin="0,0,16,0" Checked="AutoPin_Changed" Unchecked="AutoPin_Changed" AutomationProperties.Name="自动绑定"/>
-            <Button x:Name="ApplyButton" Content="立即应用" FontWeight="SemiBold" FontSize="13" Height="32" Margin="0,0,6,0" VerticalAlignment="Center" Click="Apply_Click"/>
-            <Border Width="1" Height="20" Background="#DEE1E8" Margin="0,0,6,0"/>
-            <Button Width="46" Height="46" Padding="0" Background="Transparent" BorderThickness="0" Click="Minimize_Click" ToolTip="最小化" AutomationProperties.Name="最小化"><TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE921;" FontSize="10"/></Button>
-            <Button Width="46" Height="46" Padding="0" Background="Transparent" BorderThickness="0" Click="Maximize_Click" ToolTip="最大化或还原" AutomationProperties.Name="最大化或还原"><TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE922;" FontSize="10"/></Button>
-            <Button Width="46" Height="46" Padding="0" Background="Transparent" BorderThickness="0" Click="Close_Click" ToolTip="关闭" AutomationProperties.Name="关闭"><TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8BB;" FontSize="12"/></Button>
-          </StackPanel>
-        </Grid>
-      </Border>
-      <Border x:Name="ErrorBar" Grid.Row="1" Visibility="Collapsed" Background="#FDECEC" Padding="16,8">
+  <!-- At 920 x 740: 48 / 12 / 88 / 10 / 308 / 10 / 40 / 212 / 12.
+       Only the canvas and dock body share extra height when the user resizes. -->
+  <Grid x:Name="Workspace" ClipToBounds="True">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="48"/><RowDefinition Height="12"/><RowDefinition Height="88"/>
+      <RowDefinition Height="10"/><RowDefinition Height="308*" MinHeight="308"/>
+      <RowDefinition Height="10"/><RowDefinition Height="40"/>
+      <RowDefinition Height="212*" MinHeight="212"/><RowDefinition Height="12"/>
+    </Grid.RowDefinitions>
+    <Border BorderBrush="#DEE1E8" BorderThickness="0,0,0,1">
+      <Grid Margin="16,0,0,0">
+        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+          <Image Source="{Binding Icon, RelativeSource={RelativeSource AncestorType=Window}}" Width="21" Height="21" Margin="0,0,8,0"/>
+          <TextBlock Text="CorePin" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center"/>
+        </StackPanel>
+        <StackPanel Grid.Column="1" Orientation="Horizontal" shell:WindowChrome.IsHitTestVisibleInChrome="True">
+          <CheckBox x:Name="AutoPinBox" Content="自动绑定" Style="{StaticResource Switch}" FontSize="13" FontWeight="SemiBold" Margin="0,0,16,0" Checked="AutoPin_Changed" Unchecked="AutoPin_Changed" AutomationProperties.Name="自动绑定"/>
+          <Button x:Name="ApplyButton" Content="立即应用" FontWeight="SemiBold" FontSize="13" Height="32" Margin="0,0,6,0" VerticalAlignment="Center" Click="Apply_Click"/>
+          <Border Width="1" Height="20" Background="#DEE1E8" Margin="0,0,6,0"/>
+          <Button Width="46" Height="46" Padding="0" Background="Transparent" BorderThickness="0" Click="Minimize_Click" ToolTip="最小化" AutomationProperties.Name="最小化"><TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE921;" FontSize="10"/></Button>
+          <Button Width="46" Height="46" Padding="0" Background="Transparent" BorderThickness="0" Click="Maximize_Click" ToolTip="最大化或还原" AutomationProperties.Name="最大化或还原"><TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE922;" FontSize="10"/></Button>
+          <Button Width="46" Height="46" Padding="0" Background="Transparent" BorderThickness="0" Click="Close_Click" ToolTip="关闭" AutomationProperties.Name="关闭"><TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8BB;" FontSize="12"/></Button>
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <Grid x:Name="StatusBar" Grid.Row="2" Margin="16,0">
+      <Grid.RowDefinitions><RowDefinition Height="52"/><RowDefinition Height="32"/><RowDefinition Height="4"/></Grid.RowDefinitions>
+      <Border Grid.RowSpan="3" Style="{StaticResource Card}"/>
+      <Border x:Name="StatusStripe" Grid.RowSpan="3" Width="4" Background="#4B5E89" HorizontalAlignment="Left" CornerRadius="3" Margin="0,7"/>
+      <Grid Margin="14,0">
+        <Grid.ColumnDefinitions><ColumnDefinition Width="32"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+        <Border x:Name="StatusCircle" Width="32" Height="32" CornerRadius="16" Background="#EEF0F5" BorderBrush="#4B5E89" BorderThickness="1">
+          <TextBlock x:Name="StatusGlyph" Text="•••" Foreground="#4B5E89" FontWeight="SemiBold" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </Border>
+        <TextBlock Grid.Column="1" Text="{Binding Status}" FontSize="16" FontWeight="SemiBold" Margin="10,0" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+          <TextBlock Text="游戏" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
+          <TextBlock Text="League of Legends.exe" Foreground="#838D9B" FontSize="12" Margin="8,0,12,0" VerticalAlignment="Center"/>
+          <TextBlock x:Name="RunningText" Text="{Binding Running}" Foreground="#838D9B" FontSize="12" VerticalAlignment="Center"/>
+          <Button x:Name="TechnicalButton" Content="技术详情  ﹀" Padding="4,0" Margin="14,0,0,0" MinHeight="28" Background="Transparent" BorderThickness="0" Foreground="{StaticResource Muted}" Click="Technical_Click" AutomationProperties.HelpText="打开技术详情覆盖层，不改变窗口尺寸"/>
+        </StackPanel>
+      </Grid>
+      <!-- Summary, elevation and errors share the same 32-DIP slot. -->
+      <Border x:Name="SummarySlot" Grid.Row="1" Margin="10,0" Background="#F3F4F7" BorderBrush="#DFE3EB" BorderThickness="1" CornerRadius="6" Padding="10,0">
         <DockPanel>
-          <Button x:Name="ErrorDismiss" DockPanel.Dock="Right" Content="×" Click="DismissError_Click" MinHeight="24" Padding="6,0" Margin="8,0,0,0" AutomationProperties.Name="关闭错误提示"/>
-          <Button x:Name="ErrorElevateButton" DockPanel.Dock="Right" Content="以管理员身份重新启动" Click="Elevate_Click" Visibility="Collapsed" Foreground="#C42B1C"/>
-          <TextBlock x:Name="ErrorTextBlock" Foreground="#C42B1C" TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,12,0"/>
+          <Button x:Name="ElevateButton" DockPanel.Dock="Right" Content="以管理员身份重新启动" Style="{StaticResource PrimaryButton}" Height="26" MinHeight="26" Padding="10,1" Margin="8,0,0,0" Click="Elevate_Click" Visibility="Collapsed"/>
+          <TextBlock x:Name="SummaryText" Text="{Binding Summary}" Foreground="{StaticResource Muted}" FontSize="12" TextTrimming="CharacterEllipsis" ToolTip="{Binding Summary}" VerticalAlignment="Center"/>
         </DockPanel>
       </Border>
-      <Grid x:Name="MainScroll" Grid.Row="2">
-        <Grid Margin="15,11,15,13">
-          <Grid.ColumnDefinitions><ColumnDefinition Width="308"/><ColumnDefinition Width="14"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-          <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-          <StackPanel x:Name="LeftRail">
-            <Border Style="{StaticResource Card}">
-              <Grid>
-                <Border x:Name="StatusStripe" Width="4" Background="#4B5E89" HorizontalAlignment="Left" CornerRadius="3" Margin="-1,7,0,7"/>
-                <StackPanel Margin="14,13">
-                  <Grid>
-                    <Grid.ColumnDefinitions><ColumnDefinition Width="34"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                    <Border x:Name="StatusCircle" Width="32" Height="32" CornerRadius="16" Background="#EEF0F5" BorderBrush="#4B5E89" BorderThickness="1">
-                      <TextBlock x:Name="StatusGlyph" Text="•••" Foreground="#4B5E89" FontWeight="SemiBold" FontSize="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    </Border>
-                    <TextBlock Grid.Column="1" Text="{Binding Status}" FontSize="16" FontWeight="SemiBold" Margin="8,0,0,0" TextWrapping="Wrap" VerticalAlignment="Center"/>
-                  </Grid>
-                  <TextBlock Text="{Binding Summary}" Foreground="{StaticResource Muted}" TextWrapping="Wrap" LineHeight="18" Margin="1,8,0,0"/>
-                  <Button x:Name="ElevateButton" Content="以管理员身份重新启动" Style="{StaticResource PrimaryButton}" HorizontalAlignment="Left" Margin="0,10,0,0" Click="Elevate_Click" Visibility="Collapsed"/>
-                  <Border Height="1" Background="#E5E8EE" Margin="0,12,0,10"/>
-                  <Grid>
-                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                    <StackPanel>
-                      <TextBlock Text="游戏" FontSize="13" FontWeight="SemiBold"/>
-                      <TextBlock Text="League of Legends.exe" Foreground="#838D9B" FontSize="11" Margin="0,4,0,0"/>
-                    </StackPanel>
-                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                      <TextBlock x:Name="RunningText" Text="{Binding Running}" Foreground="#838D9B" FontSize="12" HorizontalAlignment="Left"/>
-                      <Button Content="技术详情  ﹀" Padding="0,1" MinHeight="18" FontSize="11" Background="Transparent" BorderThickness="0" Foreground="#838D9B" Click="Technical_Click"/>
-                    </StackPanel>
-                  </Grid>
-                  <StackPanel x:Name="TechnicalPanel" Visibility="Collapsed" Margin="0,12,0,0">
-                    <TextBlock Text="技术详情" FontWeight="SemiBold"/>
-                    <TextBlock x:Name="CheckText" Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,4,0,8" FontSize="11"/>
-                    <ItemsControl ItemsSource="{Binding Processes}">
-                      <ItemsControl.ItemTemplate><DataTemplate>
-                        <StackPanel Margin="0,0,0,10">
-                          <TextBlock FontWeight="SemiBold" TextWrapping="Wrap"><Run Text="{Binding Name}"/><Run Text=" · PID "/><Run Text="{Binding Id}"/></TextBlock>
-                          <TextBlock Text="{Binding PowerSummary}" TextWrapping="Wrap" FontSize="11" Margin="0,4,0,0"/>
-                          <TextBlock Text="{Binding CpuSets, StringFormat='CPU Sets：{0}'}" TextWrapping="Wrap" FontSize="11"/>
-                          <TextBlock Text="{Binding Affinity, StringFormat='亲和性：{0}'}" TextWrapping="Wrap" FontSize="11"/>
-                          <TextBlock Text="{Binding Detail, StringFormat='错误详情：{0}'}" TextWrapping="Wrap" Foreground="{StaticResource Muted}" FontSize="11"/>
-                        </StackPanel>
-                      </DataTemplate></ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                    <Button Content="刷新拓扑" Click="RefreshTopology_Click" HorizontalAlignment="Left"/>
-                  </StackPanel>
-                </StackPanel>
-              </Grid>
-            </Border>
-            <Button x:Name="ProgramsButton" Style="{StaticResource RailButton}" Click="Programs_Click" Margin="0,8,0,0">
-              <DockPanel><TextBlock DockPanel.Dock="Right" Text="›" Foreground="#838D9B"/><TextBlock Text="程序与启动"/></DockPanel>
-            </Button>
-            <Button x:Name="LogsButton" Style="{StaticResource RailButton}" Click="Logs_Click">
-              <DockPanel><TextBlock DockPanel.Dock="Right" Text="›" Foreground="#838D9B"/><TextBlock Text="日志"/></DockPanel>
-            </Button>
-            <Border x:Name="ProgramsPanel" Style="{StaticResource Card}" Visibility="Collapsed" Padding="12" Margin="0,6,0,0">
-              <StackPanel>
-                <DockPanel Margin="0,0,0,8"><Button DockPanel.Dock="Right" Content="查找进程" Click="Discover_Click"/><TextBlock Text="监视列表" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/></DockPanel>
-                <TextBlock Text="进入训练或对局后，查找正在运行的游戏进程。" Foreground="{StaticResource Muted}" TextWrapping="Wrap" FontSize="11" Margin="0,0,0,10"/>
-                <ItemsControl ItemsSource="{Binding Targets}">
-                  <ItemsControl.ItemTemplate><DataTemplate>
-                    <Border BorderBrush="#E7EAF0" BorderThickness="0,0,0,1" Padding="0,0,0,9" Margin="0,0,0,9">
-                      <StackPanel>
-                        <DockPanel Margin="0,0,0,5">
-                          <CheckBox DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding Enabled, Mode=TwoWay}" AutomationProperties.Name="{Binding Name, StringFormat='监视 {0}'}"/>
-                          <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="11"/>
-                        </DockPanel>
-                        <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" FontSize="11" AutomationProperties.Name="进程文件名"/>
-                        <DockPanel Margin="0,4,0,0">
-                          <Button DockPanel.Dock="Right" Content="移除" Click="RemoveTarget_Click" Tag="{Binding}" Padding="4,0" MinHeight="18" FontSize="11" BorderThickness="0" Foreground="{StaticResource Muted}"/>
-                          <TextBlock Text="{Binding Note}" Foreground="{StaticResource Muted}" FontSize="10" VerticalAlignment="Center"/>
-                        </DockPanel>
-                      </StackPanel>
-                    </Border>
-                  </DataTemplate></ItemsControl.ItemTemplate>
-                </ItemsControl>
-                <DockPanel Margin="0,0,0,8">
-                  <Button DockPanel.Dock="Right" Content="添加" Click="AddTarget_Click" Margin="6,0,0,0"/>
-                  <TextBox x:Name="NewTargetBox" ToolTip="输入精确的 .exe 文件名" AutomationProperties.Name="新进程文件名"/>
-                </DockPanel>
-                <Border x:Name="TargetsToast" Background="#E6F4ED" CornerRadius="4" Padding="8,6" Visibility="Collapsed" Margin="0,0,0,6"><TextBlock x:Name="TargetsToastText" Foreground="#0F7A5A" TextWrapping="Wrap"/></Border>
-                <Button Content="保存监视列表" Style="{StaticResource PrimaryButton}" Click="SaveTargets_Click" HorizontalAlignment="Right"/>
-                <Border Height="1" Background="#E5E8EE" Margin="0,14,0,12"/>
-                <CheckBox x:Name="StartupBox" Content="登录 Windows 后启动" Style="{StaticResource Switch}" Checked="Startup_Changed" Unchecked="Startup_Changed"/>
-                <TextBlock Text="仅当前用户；启动后在托盘运行，不弹出窗口。" Foreground="{StaticResource Muted}" TextWrapping="Wrap" FontSize="11" Margin="0,8,0,0"/>
-              </StackPanel>
-            </Border>
-            <Border x:Name="LogsPanel" Style="{StaticResource Card}" Visibility="Collapsed" Padding="12" Margin="0,6,0,0">
-              <StackPanel>
-                <TextBlock Text="运行日志" FontSize="13" FontWeight="SemiBold"/>
-                <ListBox ItemsSource="{Binding Logs}" Height="230" Margin="0,8,0,8" BorderThickness="0" Background="Transparent" ScrollViewer.HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch">
-                  <ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" TextWrapping="Wrap" FontSize="11" Margin="0,4"/></DataTemplate></ListBox.ItemTemplate>
-                </ListBox>
-                <TextBlock Text="最多保留 250 条" Foreground="{StaticResource Muted}" FontSize="11"/>
-              </StackPanel>
-            </Border>
+      <Border x:Name="ErrorBar" Grid.Row="1" Margin="10,0" Visibility="Collapsed" Background="#FDECEC" BorderBrush="#EAB7B1" BorderThickness="1" CornerRadius="6" Padding="10,0">
+        <DockPanel>
+          <Button DockPanel.Dock="Right" Content="×" Click="DismissError_Click" Height="26" MinHeight="26" Padding="6,0" Margin="6,0,0,0" Background="Transparent" BorderThickness="0" AutomationProperties.Name="关闭错误提示"/>
+          <Button x:Name="ErrorElevateButton" DockPanel.Dock="Right" Content="以管理员身份重新启动" Click="Elevate_Click" Height="26" MinHeight="26" Padding="8,0" Visibility="Collapsed" Foreground="#C42B1C"/>
+          <TextBlock x:Name="ErrorTextBlock" Foreground="#C42B1C" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+        </DockPanel>
+      </Border>
+    </Grid>
+
+    <Border x:Name="CoreCanvas" Grid.Row="4" Style="{StaticResource Card}" Margin="16,0" Padding="13">
+      <Grid>
+        <Grid.RowDefinitions><RowDefinition Height="24"/><RowDefinition Height="28"/><RowDefinition Height="*"/><RowDefinition Height="6"/><RowDefinition Height="60"/></Grid.RowDefinitions>
+        <DockPanel>
+          <CheckBox x:Name="NumbersBox" DockPanel.Dock="Right" Content="显示编号" Style="{StaticResource Switch}" Foreground="{StaticResource Muted}" Checked="Numbers_Changed" Unchecked="Numbers_Changed"/>
+          <TextBlock Text="将游戏固定到哪些处理器" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
+        </DockPanel>
+        <DockPanel Grid.Row="1">
+          <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+            <Button Content="恢复推荐" Click="Recommended_Click" Margin="0,0,6,0" Height="28" Padding="10,2"/>
+            <Button Content="全选" Click="SelectAll_Click" Height="28" Padding="10,2"/>
           </StackPanel>
-          </ScrollViewer>
-          <Border Grid.Column="2" Style="{StaticResource Card}" Padding="13" MinHeight="300">
-            <Grid>
-              <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-              <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-              <StackPanel>
-                <DockPanel>
-                  <CheckBox x:Name="NumbersBox" DockPanel.Dock="Right" Content="显示编号" Style="{StaticResource Switch}" Foreground="{StaticResource Muted}" Checked="Numbers_Changed" Unchecked="Numbers_Changed"/>
-                  <TextBlock Text="将游戏固定到哪些处理器" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                </DockPanel>
-                <DockPanel Margin="0,7,0,8">
-                  <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                    <Button Content="恢复推荐" Click="Recommended_Click" Margin="0,0,6,0"/>
-                    <Button Content="全选" Click="SelectAll_Click"/>
-                  </StackPanel>
-                  <TextBlock Text="{Binding Policy}" Foreground="{StaticResource Muted}" TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                </DockPanel>
-                <TextBlock x:Name="PerformanceTitle" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                <WrapPanel x:Name="PerformanceMap"/>
-                <StackPanel x:Name="EfficiencySection" Margin="0,14,0,0">
-                  <TextBlock x:Name="EfficiencyTitle" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                  <WrapPanel x:Name="EfficiencyMap"/>
-                </StackPanel>
-                <TextBlock x:Name="TopologyNote" Foreground="{StaticResource Muted}" TextWrapping="Wrap" FontSize="11" Margin="0,8,0,0" Visibility="Collapsed"/>
-                <Border x:Name="CoreDetail" BorderBrush="#DCE2ED" BorderThickness="1" CornerRadius="6" Background="#F7F9FC" Margin="0,12,0,0" Padding="10" Visibility="Collapsed">
-                  <DockPanel>
-                    <Button DockPanel.Dock="Right" Content="×" Click="CloseCoreDetail_Click" Background="Transparent" BorderThickness="0" Padding="3,0" MinHeight="20" VerticalAlignment="Top" AutomationProperties.Name="关闭核心详情"/>
-                    <StackPanel>
-                      <TextBlock x:Name="CoreDetailTitle" FontWeight="SemiBold"/>
-                      <TextBlock x:Name="CoreDetailText" TextWrapping="Wrap" Foreground="{StaticResource Muted}" FontSize="11" Margin="0,5,0,0" LineHeight="17"/>
-                    </StackPanel>
-                  </DockPanel>
-                </Border>
+          <TextBlock Text="{Binding Policy}" Foreground="{StaticResource Muted}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Margin="0,0,8,0"/>
+        </DockPanel>
+        <ScrollViewer x:Name="CoreMapScroll" Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,2,0,0">
+          <StackPanel VerticalAlignment="Top">
+            <TextBlock x:Name="PerformanceTitle" FontWeight="SemiBold" Height="18"/>
+            <WrapPanel x:Name="PerformanceMap" HorizontalAlignment="Left"/>
+            <StackPanel x:Name="EfficiencySection" Margin="0,6,0,0">
+              <TextBlock x:Name="EfficiencyTitle" FontWeight="SemiBold" Height="18"/>
+              <WrapPanel x:Name="EfficiencyMap" HorizontalAlignment="Left"/>
+            </StackPanel>
+            <TextBlock x:Name="TopologyNote" Foreground="{StaticResource Muted}" TextWrapping="Wrap" FontSize="11" Margin="0,4,0,0" Visibility="Collapsed"/>
+          </StackPanel>
+        </ScrollViewer>
+        <Grid x:Name="CoreDetailSlot" Grid.Row="4">
+          <Border x:Name="CoreHint" BorderBrush="#DFE3EB" BorderThickness="1" CornerRadius="6" Background="#F7F8FB" Padding="13,8">
+            <StackPanel VerticalAlignment="Center">
+              <TextBlock Text="单击某个逻辑处理器，可查看物理核心、编号与是否纳入策略。" Foreground="{StaticResource Muted}" FontSize="12"/>
+              <TextBlock Text="侧释会出现在核图下方这一栏，不会覆盖核图，也不会改变窗口大小。推荐将同一物理核心的两个线程一并纳入。" Foreground="#838D9B" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,0"/>
+            </StackPanel>
+          </Border>
+          <Border x:Name="CoreDetail" BorderBrush="#CBD8F0" BorderThickness="1" CornerRadius="6" Background="#F2F5FC" Padding="12,6" Visibility="Collapsed">
+            <DockPanel>
+              <Button DockPanel.Dock="Right" Content="×" Click="CloseCoreDetail_Click" Background="Transparent" BorderThickness="0" Padding="3,0" MinHeight="20" VerticalAlignment="Top" AutomationProperties.Name="关闭核心详情"/>
+              <StackPanel VerticalAlignment="Center">
+                <TextBlock x:Name="CoreDetailTitle" FontWeight="SemiBold" FontSize="12"/>
+                <TextBlock x:Name="CoreDetailText" TextWrapping="Wrap" Foreground="{StaticResource Muted}" FontSize="10" Margin="0,2,0,0" LineHeight="13"/>
               </StackPanel>
-              </ScrollViewer>
-              <StackPanel Grid.Row="1" Margin="0,16,0,0">
-                <Border x:Name="CoresToast" Background="#E6F4ED" CornerRadius="4" Padding="8,6" HorizontalAlignment="Right" Visibility="Collapsed" Margin="0,0,0,6"><TextBlock x:Name="CoresToastText" Foreground="#0F7A5A"/></Border>
-                <DockPanel>
-                  <Button DockPanel.Dock="Right" Content="保存核心策略" Style="{StaticResource PrimaryButton}" Click="SaveCores_Click" Height="32" FontSize="13" Padding="13,4"/>
-                  <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <Border Background="#F4BF24" BorderBrush="#C99513" BorderThickness="1" Width="11" Height="11" CornerRadius="2" Margin="0,0,4,0"/><TextBlock Text="性能核" Foreground="{StaticResource Muted}" FontSize="11" Margin="0,0,12,0"/>
-                    <Border Background="#ECEFF3" BorderBrush="#A4AEBD" BorderThickness="1" Width="11" Height="11" CornerRadius="2" Margin="0,0,4,0"/><TextBlock Text="能效核" Foreground="{StaticResource Muted}" FontSize="11" Margin="0,0,12,0"/>
-                    <Border Background="#203E83" Width="11" Height="11" CornerRadius="3" Margin="0,0,4,0"><TextBlock Text="✓" Foreground="White" FontSize="9" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border><TextBlock Text="已纳入策略" Foreground="{StaticResource Muted}" FontSize="11"/>
-                  </StackPanel>
-                </DockPanel>
-              </StackPanel>
-            </Grid>
+            </DockPanel>
           </Border>
         </Grid>
       </Grid>
+    </Border>
+
+    <Border Grid.Row="6" Grid.RowSpan="2" Style="{StaticResource Card}" Margin="16,0"/>
+    <Grid x:Name="DockHeader" Grid.Row="6" Margin="26,0">
+      <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+      <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+        <Button x:Name="ProgramsButton" Content="程序与启动" Style="{StaticResource DockTab}" Click="Programs_Click" Margin="0,0,6,0"/>
+        <Button x:Name="LogsButton" Content="日志" Style="{StaticResource DockTab}" Click="Logs_Click"/>
+      </StackPanel>
+      <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="18,0,8,0">
+        <Border Background="#F4BF24" BorderBrush="#C99513" BorderThickness="1" Width="11" Height="11" CornerRadius="2" Margin="0,0,4,0"/><TextBlock Text="性能核" Foreground="{StaticResource Muted}" FontSize="11" Margin="0,0,12,0"/>
+        <Border Background="#ECEFF3" BorderBrush="#A4AEBD" BorderThickness="1" Width="11" Height="11" CornerRadius="2" Margin="0,0,4,0"/><TextBlock Text="能效核" Foreground="{StaticResource Muted}" FontSize="11" Margin="0,0,12,0"/>
+        <Border Background="#203E83" Width="11" Height="11" CornerRadius="3" Margin="0,0,4,0"><TextBlock Text="✓" Foreground="White" FontSize="9" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border><TextBlock Text="已纳入策略" Foreground="{StaticResource Muted}" FontSize="11"/>
+      </StackPanel>
+      <Grid Grid.Column="2" MaxWidth="190" Margin="0,0,10,0" VerticalAlignment="Center">
+        <Border x:Name="CoresToast" Visibility="Collapsed"><TextBlock x:Name="CoresToastText" Foreground="#0F7A5A" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"/></Border>
+        <Border x:Name="TargetsToast" Visibility="Collapsed"><TextBlock x:Name="TargetsToastText" Foreground="#0F7A5A" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"/></Border>
+      </Grid>
+      <Button Grid.Column="3" Content="保存核心策略" Style="{StaticResource PrimaryButton}" Click="SaveCores_Click" Height="32" FontSize="13" Padding="13,4"/>
+      <Border Grid.ColumnSpan="4" Height="1" Background="#E5E8EE" VerticalAlignment="Bottom"/>
     </Grid>
-  </Border>
+
+    <!-- Only these three panels switch; the core canvas stays in its own row. -->
+    <Grid x:Name="DockBody" Grid.Row="7" Margin="30,0">
+      <Border x:Name="DefaultPanel" Padding="0,10,0,8">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+          <StackPanel VerticalAlignment="Top">
+            <TextBlock Text="这一栏用来查看程序与启动、运行日志。内容只在这一固定高度里更换或滚动，上方核图始终保留，窗口大小不会改变。" Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,0,0,18"/>
+            <Grid>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="14"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+              <Border Style="{StaticResource GuideCard}">
+                <Grid>
+                  <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                  <TextBlock Text="程序与启动" FontSize="14" FontWeight="SemiBold"/>
+                  <TextBlock Grid.Row="1" Text="管理监视的进程、查找正在运行的进程，以及登录 Windows 后启动。默认只监视游戏，不监视客户端。" Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,9,0,12"/>
+                  <Button Grid.Row="2" Content="打开此栏 →" Click="Programs_Click" Foreground="{StaticResource Accent}" Background="Transparent" BorderThickness="0" Padding="0" MinHeight="20" HorizontalAlignment="Left"/>
+                </Grid>
+              </Border>
+              <Border Grid.Column="2" Style="{StaticResource GuideCard}">
+                <Grid>
+                  <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                  <TextBlock Text="日志" FontSize="14" FontWeight="SemiBold"/>
+                  <TextBlock Grid.Row="1" Text="查看绑定、检测与退出的近期记录。最多保留 250 条，便于确认自动绑定是否生效。" Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,9,0,12"/>
+                  <Button Grid.Row="2" Content="打开此栏 →" Click="Logs_Click" Foreground="{StaticResource Accent}" Background="Transparent" BorderThickness="0" Padding="0" MinHeight="20" HorizontalAlignment="Left"/>
+                </Grid>
+              </Border>
+            </Grid>
+            <TextBlock Text="推荐策略是全部性能核。点选上方处理器即可调整；保存核心策略与图例都在本栏标题行，随时可用。" Foreground="#838D9B" FontSize="11" TextWrapping="Wrap" Margin="0,16,0,0"/>
+          </StackPanel>
+        </ScrollViewer>
+      </Border>
+      <Border x:Name="ProgramsPanel" Visibility="Collapsed" Padding="0,7,0,8">
+        <ScrollViewer x:Name="ProgramsScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+          <StackPanel VerticalAlignment="Top">
+            <DockPanel>
+              <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                <TextBox x:Name="NewTargetBox" Width="145" Height="28" Padding="7,2" Margin="0,0,6,0" ToolTip="输入精确的 .exe 文件名，然后点击添加" AutomationProperties.Name="新进程文件名"/>
+                <Button Content="添加" Click="AddTarget_Click" Margin="0,0,6,0" Padding="10,2"/>
+                <Button Content="查找进程" Click="Discover_Click" Margin="0,0,6,0" Padding="10,2"/>
+                <Button Content="保存监视列表" Style="{StaticResource PrimaryButton}" Click="SaveTargets_Click" Padding="10,2"/>
+              </StackPanel>
+              <TextBlock Text="监视的进程" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
+            </DockPanel>
+            <TextBlock Text="默认只监视游戏。客户端不会被绑定，以免影响启动器。" Foreground="{StaticResource Muted}" FontSize="11" Margin="0,0,0,4"/>
+            <ItemsControl ItemsSource="{Binding Targets}">
+              <ItemsControl.ItemTemplate><DataTemplate>
+                <Border BorderBrush="#E5E8EE" BorderThickness="0,1,0,0" Padding="0,6" MinHeight="40">
+                  <Grid>
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="40"/><ColumnDefinition Width="*"/><ColumnDefinition Width="250"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding Enabled, Mode=TwoWay}" AutomationProperties.Name="{Binding DisplayName, StringFormat='监视 {0}'}"/>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="8,0">
+                      <TextBlock Text="{Binding DisplayName}" FontSize="13" FontWeight="SemiBold"/>
+                      <TextBlock Text="{Binding Note}" Foreground="#838D9B" FontSize="10">
+                        <TextBlock.Style><Style TargetType="TextBlock"><Style.Triggers><Trigger Property="Text" Value=""><Setter Property="Visibility" Value="Collapsed"/></Trigger></Style.Triggers></Style></TextBlock.Style>
+                      </TextBlock>
+                    </StackPanel>
+                    <TextBox Grid.Column="2" Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" FontSize="12" Height="26" Padding="7,2" AutomationProperties.Name="进程文件名"/>
+                    <Button Grid.Column="3" Content="移除" Click="RemoveTarget_Click" Tag="{Binding}" Height="26" MinHeight="26" Padding="10,2" Margin="8,0,0,0"/>
+                  </Grid>
+                </Border>
+              </DataTemplate></ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <Border BorderBrush="#DFE3EB" BorderThickness="1" CornerRadius="6" Background="#F7F8FB" Padding="12,7" Margin="0,6,0,0">
+              <DockPanel>
+                <CheckBox x:Name="StartupBox" DockPanel.Dock="Right" Style="{StaticResource Switch}" Checked="Startup_Changed" Unchecked="Startup_Changed" AutomationProperties.Name="登录 Windows 后启动"/>
+                <StackPanel>
+                  <TextBlock Text="登录 Windows 后启动" FontSize="13" FontWeight="SemiBold"/>
+                  <TextBlock Text="仅当前用户；启动后在托盘运行，不弹出窗口。" Foreground="{StaticResource Muted}" FontSize="11" Margin="0,2,0,0"/>
+                </StackPanel>
+              </DockPanel>
+            </Border>
+          </StackPanel>
+        </ScrollViewer>
+      </Border>
+      <Border x:Name="LogsPanel" Visibility="Collapsed" Padding="0,8">
+        <Grid>
+          <Grid.RowDefinitions><RowDefinition Height="22"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+          <DockPanel><TextBlock DockPanel.Dock="Right" Text="最多保留 250 条" Foreground="#838D9B" FontSize="11"/><TextBlock Text="运行日志" FontSize="14" FontWeight="SemiBold"/></DockPanel>
+          <ListBox x:Name="LogList" Grid.Row="1" ItemsSource="{Binding Logs}" BorderThickness="0" Background="Transparent" ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.CanContentScroll="True" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling" HorizontalContentAlignment="Stretch" AlternationCount="2">
+            <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem"><Setter Property="Padding" Value="7,3"/><Setter Property="BorderThickness" Value="0"/><Style.Triggers><Trigger Property="ItemsControl.AlternationIndex" Value="0"><Setter Property="Background" Value="#F7F8FB"/></Trigger></Style.Triggers></Style></ListBox.ItemContainerStyle>
+            <ListBox.ItemTemplate><DataTemplate>
+              <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="64"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                <TextBlock Text="{Binding Time}" Foreground="#838D9B" FontSize="11"/>
+                <TextBlock Grid.Column="1" Text="{Binding Message}" TextWrapping="Wrap" FontSize="12"/>
+              </Grid>
+            </DataTemplate></ListBox.ItemTemplate>
+          </ListBox>
+        </Grid>
+      </Border>
+    </Grid>
+
+    <Popup x:Name="TechnicalPopup" PlacementTarget="{Binding ElementName=TechnicalButton}" Placement="Bottom" HorizontalOffset="-340" VerticalOffset="6" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade">
+      <Border x:Name="TechnicalPanel" Style="{StaticResource Card}" Width="420" MaxHeight="400" Padding="16" BorderBrush="#C6CDDA">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+          <StackPanel>
+            <DockPanel><Button DockPanel.Dock="Right" Content="×" Click="CloseTechnical_Click" MinHeight="20" Padding="4,0" BorderThickness="0" Background="Transparent" AutomationProperties.Name="关闭技术详情"/><TextBlock Text="技术详情" FontSize="14" FontWeight="SemiBold"/></DockPanel>
+            <TextBlock x:Name="CheckText" Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,8,0,12" FontSize="11"/>
+            <ItemsControl ItemsSource="{Binding Processes}">
+              <ItemsControl.ItemTemplate><DataTemplate>
+                <StackPanel Margin="0,0,0,12">
+                  <TextBlock FontWeight="SemiBold" TextWrapping="Wrap"><Run Text="{Binding Name}"/><Run Text=" · PID "/><Run Text="{Binding Id}"/></TextBlock>
+                  <Grid Margin="0,6,0,0">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="102"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                    <TextBlock Text="处理器省电限制" Foreground="{StaticResource Muted}" FontSize="11"/><TextBlock Grid.Column="1" Text="{Binding PowerSummary}" TextWrapping="Wrap" FontSize="11"/>
+                    <TextBlock Grid.Row="1" Text="CPU Sets" Foreground="{StaticResource Muted}" FontSize="11"/><TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding CpuSets}" TextWrapping="Wrap" FontSize="11"/>
+                    <TextBlock Grid.Row="2" Text="亲和性" Foreground="{StaticResource Muted}" FontSize="11"/><TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Affinity}" TextWrapping="Wrap" FontSize="11"/>
+                    <TextBlock Grid.Row="3" Text="错误详情" Foreground="{StaticResource Muted}" FontSize="11"/><TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Detail}" TextWrapping="Wrap" FontSize="11"/>
+                  </Grid>
+                </StackPanel>
+              </DataTemplate></ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <Button Content="刷新拓扑" Click="RefreshTopology_Click" HorizontalAlignment="Left"/>
+            <TextBlock Text="十六进制与接口名称仅在技术详情中显示。" Foreground="#838D9B" TextWrapping="Wrap" FontSize="11" Margin="0,10,0,0"/>
+          </StackPanel>
+        </ScrollViewer>
+      </Border>
+    </Popup>
+    <!-- Overlay outline: does not subtract from the 740-DIP row budget. -->
+    <Border Grid.RowSpan="9" BorderBrush="#CCD0D9" BorderThickness="1" CornerRadius="8" IsHitTestVisible="False"/>
+  </Grid>
 </Window>

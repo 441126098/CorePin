@@ -18,9 +18,10 @@ public sealed class ProcessTuner
     public ProcessReport Inspect(ProcessItem item, CpuTopology topology, IReadOnlyList<CpuInfo> selected, bool apply)
     {
         long creation = 0;
+        SafeKernelHandle? query = null;
         try
         {
-            using var query = Open(item.Id, NativeMethods.QueryLimitedInformation);
+            query = Open(item.Id, NativeMethods.QueryLimitedInformation);
             creation = ValidateIdentity(query, item.Name);
             var state = Read(query, topology.GroupCount == 1);
             var errors = new List<string>();
@@ -88,14 +89,29 @@ public sealed class ProcessTuner
                 detail += (detail.Length > 0 ? "；" : "") + "多处理器组：使用进程默认 CPU Sets（软亲和性）；线程独立 CPU Sets、线程组和硬亲和性可能覆盖此设置。";
             return new ProcessReport(item.Id, item.Name, creation, CpuLabel(state.CpuSets, topology),
                 topology.GroupCount > 1 ? "跨组：不写入 64 位掩码" : state.Mask is ulong mask ? $"0x{mask:X16}" : "无法读取",
-                QosLabel(state.Power), status, detail, compliant, changed);
+                QosLabel(state.Power), status, detail, compliant, changed) { Lifetime = ReadLifetime(query) };
         }
         catch (Exception ex)
         {
+            var lifetime = query != null ? ReadLifetime(query) : ProcessLifetime.Unknown;
+            if (lifetime == ProcessLifetime.Unknown && ex is Win32Exception { NativeErrorCode: 6 or 87 or 1168 })
+            {
+                // A failed OpenProcess has no handle to query. Confirm a stale PID against a fresh snapshot.
+                try
+                {
+                    if (!ProcessCatalog.Enumerate().Any(p => p.Id == item.Id)) lifetime = ProcessLifetime.Exited;
+                }
+                catch { /* Keep an unconfirmed failure visible in the technical details. */ }
+            }
             return new ProcessReport(item.Id, item.Name, creation, "无法读取", "无法读取", "无法读取",
-                "无法访问 / 已退出", ErrorText.Describe(ex), false, false);
+                "无法访问 / 已退出", ErrorText.Describe(ex), false, false) { Lifetime = lifetime };
         }
+        finally { query?.Dispose(); }
     }
+
+    private static ProcessLifetime ReadLifetime(SafeKernelHandle process) =>
+        !NativeMethods.GetExitCodeProcess(process, out uint code) ? ProcessLifetime.Unknown :
+        code == 259 ? ProcessLifetime.Running : ProcessLifetime.Exited;
 
     private static SafeKernelHandle Open(uint pid, uint access)
     {

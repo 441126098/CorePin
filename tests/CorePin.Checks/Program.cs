@@ -72,10 +72,13 @@ try
     Check(new CpuInfo(1, 0, 1, 0, 0, 1).IsParked, "parked flag decoded");
     Check(new CpuInfo(1, 0, 1, 0, 0, 2).IsAllocated, "reservation flag decoded");
     CompatibilityChecks.Run(Check);
+    ProcessFeedbackChecks.Run(Check);
+    LayoutChecks.Run(Check, args);
 
     if (args.Contains("--native", StringComparer.OrdinalIgnoreCase))
     {
         Check(Environment.Is64BitProcess, "native checks run as x64");
+        ProcessCatalogChecks.Run(Check);
         var actual = new CpuTopologyService().Read();
         Check(actual.Cpus.Count > 0, "live CPU topology enumeration");
         if (actual.GroupCount != 1)
@@ -111,6 +114,10 @@ try
             var tuner = new ProcessTuner();
             var result = tuner.Inspect(self, actual, selected, true);
             Check(result.IsCompliant, "self affinity / CPU Sets / QoS set and verified: " + result.Detail);
+            Check(result.Lifetime == ProcessLifetime.Running, "inspection confirms the test process is still running");
+            var missing = tuner.Inspect(new ProcessItem(uint.MaxValue, "missing.exe", 0), actual, selected, false);
+            Check(missing.Lifetime == ProcessLifetime.Exited && ProcessFeedback.IsExit(missing),
+                "inspection of a nonexistent PID confirms normal exit without applying any policy");
             var unchanged = tuner.Inspect(self, actual, selected, true);
             Check(unchanged.IsCompliant && !unchanged.Changed, "compliant state avoids redundant writes");
             var wrongIdentity = tuner.Inspect(self with { Name = "different.exe" }, actual, selected, true);

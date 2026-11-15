@@ -1,11 +1,14 @@
 ﻿param(
     [string]$ProjectRoot = (Split-Path -Parent $PSScriptRoot),
-    [string]$OutputRoot = (Join-Path (Split-Path -Parent $PSScriptRoot) 'artifacts\corepin-public-prep\release'),
+    [string]$OutputRoot = (Join-Path (Split-Path -Parent $PSScriptRoot) 'artifacts\corepin-selfcontained'),
     [switch]$FrameworkDependent,
     [switch]$NoRestore,
     [string]$BuildArtifactsPath
 )
 $ErrorActionPreference = 'Stop'
+if ($FrameworkDependent -and !$PSBoundParameters.ContainsKey('OutputRoot')) {
+    $OutputRoot = Join-Path $ProjectRoot 'artifacts\corepin-framework-dependent'
+}
 $ProjectRoot = [IO.Path]::GetFullPath($ProjectRoot)
 $OutputRoot = [IO.Path]::GetFullPath($OutputRoot)
 if (Test-Path -LiteralPath $OutputRoot) { throw ('OutputRoot must be new; existing output is preserved: ' + $OutputRoot) }
@@ -13,17 +16,14 @@ if (Test-Path -LiteralPath $OutputRoot) { throw ('OutputRoot must be new; existi
 $payload = Join-Path $OutputRoot 'publish'
 $build = if ($BuildArtifactsPath) { [IO.Path]::GetFullPath($BuildArtifactsPath) } else { Join-Path $OutputRoot 'build' }
 $project = Join-Path $ProjectRoot 'src\CorePin\CorePin.csproj'
-$publishArguments = @('publish',$project,'-c','Release','--artifacts-path',$build,'-o',$payload,'-p:PublishSingleFile=false','-p:PublishTrimmed=false','-p:DebugType=None','-p:DebugSymbols=false')
+$publishArguments = @('publish',$project,'-c','Release','-r','win-x64','--artifacts-path',$build,'-o',$payload,'-p:PublishSingleFile=false','-p:PublishTrimmed=false','-p:PublishAot=false','-p:DebugType=None','-p:DebugSymbols=false')
 if ($FrameworkDependent) { $publishArguments += @('--self-contained','false') }
-else { $publishArguments += @('-r','win-x64','--self-contained','true') }
+else { $publishArguments += @('--self-contained','true') }
 if ($NoRestore) { $publishArguments += '--no-restore' }
 & dotnet @publishArguments
 if ($LASTEXITCODE -ne 0) { throw ('dotnet publish failed with exit code ' + $LASTEXITCODE + '; partial output preserved at ' + $OutputRoot) }
-$required = @('CorePin.exe','CorePin.dll','CorePin.deps.json','CorePin.runtimeconfig.json')
-if (!$FrameworkDependent) { $required += @('coreclr.dll','hostfxr.dll','hostpolicy.dll','System.Private.CoreLib.dll','PresentationFramework.dll','System.Windows.Forms.dll') }
-foreach ($name in $required) {
-    if (!(Test-Path -LiteralPath (Join-Path $payload $name) -PathType Leaf)) { throw ('Incomplete payload: ' + $name) }
-}
+$payloadInfo = & (Join-Path $PSScriptRoot 'Test-PublishPayload.ps1') -PayloadPath $payload -AllowFrameworkDependent:$FrameworkDependent
+if ($FrameworkDependent -and $payloadInfo.SelfContained) { throw 'Expected the explicitly requested framework-dependent payload' }
 Copy-Item -LiteralPath (Join-Path $ProjectRoot 'LICENSE'),(Join-Path $ProjectRoot 'README.md') -Destination $payload
 Copy-Item -LiteralPath (Join-Path $ProjectRoot 'docs') -Destination (Join-Path $payload 'docs') -Recurse
 if (!$FrameworkDependent) {
@@ -38,7 +38,7 @@ if (!$FrameworkDependent) {
             if (Test-Path -LiteralPath $candidate -PathType Container) { $packRoot = $candidate; break }
         }
         if (!$packRoot) { throw ('Cannot locate restored runtime notices: ' + $pack) }
-        $notices = @(Get-ChildItem -LiteralPath $packRoot -File | Where-Object { $_.Name -match '(?i)license|notice' -and $_.Extension -in '.txt','.md' })
+        $notices = @(Get-ChildItem -LiteralPath $packRoot -File | Where-Object { $_.Name -match '(?i)license|notice' -and ($_.Extension -in '.txt','.md' -or $_.Name -ieq 'LICENSE') })
         if (!$notices.Count) { throw ('Missing runtime license/notice files: ' + $packRoot) }
         $destination = Join-Path (Join-Path $payload 'licenses') ($pack + '-' + $framework.version)
         [void][IO.Directory]::CreateDirectory($destination)
@@ -47,9 +47,9 @@ if (!$FrameworkDependent) {
 }
 $utf8 = New-Object Text.UTF8Encoding($false)
 $install = if ($FrameworkDependent) {
-    "CorePin win-x64 (framework-dependent)`nRequires the .NET 8 Windows Desktop Runtime x64 installed separately.`nExtract ALL files, then run CorePin.exe. See README.md and docs/DISCLAIMER.md.`n"
+    "CorePin win-x64 (framework-dependent)`nRequires the .NET 10 Windows Desktop Runtime x64 installed separately.`nExtract ALL files, then run CorePin.exe. Unsigned; normal Windows UAC/SmartScreen rules apply. See README.md and docs/COMPATIBILITY.md.`n"
 } else {
-    "CorePin win-x64 (self-contained)`nIncludes .NET / Windows Desktop runtime components and their license notices.`nExtract ALL files, then run CorePin.exe. See README.md and docs/DISCLAIMER.md.`n"
+    "CorePin win-x64 (self-contained, multi-file)`nIncludes .NET 10 / Windows Desktop runtime components and their license notices.`nExtract ALL files, then run CorePin.exe. The bundled runtime is not automatically patched; replace the complete package for updates.`nUnsigned; normal Windows UAC/SmartScreen rules apply. See README.md and docs/COMPATIBILITY.md.`n"
 }
 [IO.File]::WriteAllText((Join-Path $payload 'INSTALL.txt'), $install, $utf8)
 $lines = @(Get-ChildItem -LiteralPath $payload -File -Recurse | Sort-Object FullName | ForEach-Object {
@@ -64,5 +64,6 @@ $zip = Join-Path $OutputRoot $packageName
 $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
 [IO.File]::WriteAllText(($zip + '.sha256'), ($hash + '  ' + [IO.Path]::GetFileName($zip) + "`n"), $utf8)
 Write-Output ('PACKAGE_CREATED: ' + $zip)
+Write-Output ('PACKAGE_BYTES: ' + (Get-Item -LiteralPath $zip).Length)
 Write-Output ('PAYLOAD_FILES_HASHED: ' + $lines.Count)
 Write-Output ('ZIP_SHA256: ' + $hash)

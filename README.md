@@ -1,12 +1,16 @@
 # CorePin
 
-Windows 10/11 x64 游戏进程性能核绑定工具，使用 C# / .NET 8 WPF 独立实现。通过公开 Windows API 读取实际 CPU 拓扑，为目标进程设置 CPU Sets、单处理器组亲和性，并在 Windows 11 显式关闭执行速度节流（EcoQoS）。不使用驱动或注入，不修改游戏文件，不保证提高帧率。
+Windows 10/11 x64 游戏进程性能核绑定工具，使用 C# / .NET 10 LTS WPF 独立实现。通过公开 Windows API 读取实际 CPU 拓扑，为目标进程设置 CPU Sets、单处理器组亲和性，并在 Windows 11 显式关闭执行速度节流（EcoQoS）。不使用驱动或注入，不修改游戏文件，不保证提高帧率。
 
 默认只监视 `League of Legends.exe`，界面称为“游戏”；`LeagueClient.exe`、`LeagueClientUx.exe`、`LeagueClientUxRender.exe` 默认关闭。监视规则按完整 EXE 文件名精确匹配，不区分大小写，可在“进程与启动”中增删。发现窗口只枚举进程信息，不读取游戏程序文件。
 
 ## 安装和运行
 
 使用项目提供的 `CorePin-win-x64.zip` 时，将**整个压缩包**解压到固定的可写目录，再运行 `CorePin.exe`。自包含包附带 .NET / Windows Desktop 运行组件，不要求目标电脑另装 .NET；不要单独复制 EXE 或丢弃旁边的 DLL。此仓库提供构建及发布流程，不表示已经发布了可下载的版本。仓库地址为 [441126098/CorePin](https://github.com/441126098/CorePin)。
+
+发布目标仅为 **Windows 10/11 x64**，不提供 ARM64 或 32 位包，也不承诺所有 Windows 10/11 版本均获微软官方支持。官方 .NET 支持取决于具体 Windows 版本、版本类别及其生命周期；Windows 10 消费版停止服务和 ESU 是另一项政策，加入 ESU 不等于进入 .NET 10 的官方支持列表。具体范围、微软来源与测试缺口见 [平台和旧版本兼容说明](docs/COMPATIBILITY.md)。
+
+自包含包内的运行时**不会随系统安装的 .NET 自动修补**。维护者需用受支持的最新 .NET 10 补丁重新构建、验证并分发完整压缩包，用户需整体替换。自包含只免去另装 .NET 的步骤，不消除 UAC、权限限制或 SmartScreen。当前包没有代码签名。
 
 发布包附带 `.zip.sha256` 文件，包内 `SHA256SUMS.txt` 列出每个文件的 SHA-256。可用 PowerShell 的 `Get-FileHash .\CorePin-win-x64.zip -Algorithm SHA256` 与旁边的清单比对。校验和用于核对完整性，不代表发布者身份认证。
 
@@ -40,7 +44,7 @@ Windows 10/11 x64 游戏进程性能核绑定工具，使用 C# / .NET 8 WPF 独
 
 ## 开发与验证
 
-在 Windows x64 上使用 [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)，从仓库根目录执行：
+在 Windows x64 上使用 [.NET 10 LTS SDK](https://dotnet.microsoft.com/download/dotnet/10.0)，从仓库根目录执行。.NET 8 已于 2026-11-10 结束支持，不再用于默认发布包；见 [微软 .NET 支持政策](https://dotnet.microsoft.com/en-us/platform/support/policy/dotnet-core)。
 
 ```powershell
 dotnet build .\CorePin.sln -c Release --artifacts-path .\artifacts\dev-build
@@ -57,13 +61,15 @@ powershell.exe -NoProfile -File .\scripts\Test-Text.ps1
 生成并验证完整发布包（输出目录须尚不存在）：
 
 ```powershell
-powershell.exe -NoProfile -File .\scripts\Publish-Release.ps1 -OutputRoot .\artifacts\corepin-public-prep\release
-powershell.exe -NoProfile -File .\scripts\Test-Package.ps1 -PackagePath .\artifacts\corepin-public-prep\release\CorePin-win-x64.zip -VerificationRoot .\artifacts\corepin-public-prep\package-check
+powershell.exe -NoProfile -File .\scripts\Publish-Release.ps1
+powershell.exe -NoProfile -File .\scripts\Test-Package.ps1 -PackagePath .\artifacts\corepin-selfcontained\CorePin-win-x64.zip -VerificationRoot .\artifacts\corepin-package-check
 ```
 
-发布脚本仅打包主项目、自包含运行时、说明和许可证；构建中间文件及测试输出不进入 ZIP。验证脚本在独立目录解压并检查全部哈希，再调用 `CorePin.exe --package-check <绝对JSON路径>`。该模式在单实例锁、设置、注册表、托盘和监视器初始化前退出，只做运行时、图标及只读拓扑检查，不显示窗口或请求 UAC，不能替代真实 GUI 测试。
+默认输出为 `artifacts\corepin-selfcontained\CorePin-win-x64.zip`。发布脚本仅打包主项目、自包含运行时、说明和许可证；构建中间文件及测试输出不进入 ZIP。不启用单文件、裁剪或 AOT 发布；[WPF 不兼容裁剪](https://learn.microsoft.com/en-us/dotnet/core/deploying/trimming/incompatibilities)。
 
-若离线环境缺少自包含运行时包，可明确使用 `Publish-Release.ps1 -FrameworkDependent` 生成名称含 `framework-dependent` 的完整应用包；这类包**要求预装 .NET 8 Windows Desktop Runtime x64**。验证时必须加 `Test-Package.ps1 -AllowFrameworkDependent`，不能将其当作自包含包。已有对应构建资产时，`-NoRestore -BuildArtifactsPath <构建目录>` 可复用离线资产；缺失资产时请停止并解决构建环境问题。默认 CI 发布仍只接受经过验证的自包含包。
+验证脚本在独立目录解压并检查全部哈希、x64 apphost、`includedFrameworks` 及 WPF 托管/原生文件，默认拒绝依赖外部框架的包，再调用 `CorePin.exe --package-check <绝对JSON路径>`。该模式在单实例锁、设置、注册表、托盘和监视器初始化前退出，不显示窗口或请求 UAC。JSON 记录实际加载的 hostfxr、hostpolicy、coreclr、WPF 原生模块及托管程序集的包内路径；另保留 [官方主机跟踪](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-environment-variables#dotnet_host_trace)。仅设置 `DOTNET_ROOT` 不是自包含证明。结果与跟踪文件置于解压目录旁，不能替代真实 GUI 测试。
+
+若确需依赖外部框架，可明确使用 `Publish-Release.ps1 -FrameworkDependent -OutputRoot .\artifacts\corepin-framework-dependent` 生成 `CorePin-win-x64-framework-dependent.zip`；这类包**要求预装 .NET 10 Windows Desktop Runtime x64**。验证时必须加 `Test-Package.ps1 -AllowFrameworkDependent`，不能将其当作自包含包。已有对应 RID、配置及自包含模式的构建资产时，`-NoRestore -BuildArtifactsPath <构建目录>` 可复用离线资产；缺失资产时请停止并解决构建环境问题。默认 CI 和发布流程只接受经过验证的自包含包。
 
 `.github/workflows/ci.yml` 在 `windows-latest` 构建并执行检查。`release.yml` 可手动只生成并上传 Actions 制品；推送 `v*` 标签或明确勾选手动发布时，才使用独立、具备 `contents: write` 权限的作业创建 GitHub Release。手动发布必须指定已经存在的标签；流程不会创建标签。审核源码、验证实机行为后再自行发布。
 

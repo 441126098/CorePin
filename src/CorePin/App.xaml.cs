@@ -45,6 +45,12 @@ public partial class App : Application
             var window = new MainWindow();
             MainWindow = window;
             if (!e.Args.Contains("--tray", StringComparer.OrdinalIgnoreCase)) window.Show();
+            int memoryOutput = Array.IndexOf(e.Args, "--memory-check-output");
+            if (memoryOutput >= 0)
+            {
+                if (memoryOutput + 1 >= e.Args.Length) throw new ArgumentException("Missing memory check output path.");
+                window.StartMemoryCheck(e.Args[memoryOutput + 1]);
+            }
         }
         catch (Exception ex)
         {

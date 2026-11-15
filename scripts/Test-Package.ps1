@@ -37,22 +37,19 @@ if (@($files | Where-Object Name -like '*Checks*').Count -gt 0) { throw 'Test ou
 foreach ($name in @('CorePin.exe','CorePin.dll','CorePin.deps.json','CorePin.runtimeconfig.json','INSTALL.txt','LICENSE','README.md','docs\DISCLAIMER.md','docs\COMPATIBILITY.md')) {
     if (!(Test-Path -LiteralPath (Join-Path $VerificationRoot $name) -PathType Leaf)) { throw ('Required package file missing: ' + $name) }
 }
-$config = Get-Content -LiteralPath (Join-Path $VerificationRoot 'CorePin.runtimeconfig.json') -Raw -Encoding UTF8 | ConvertFrom-Json
-$selfContained = [bool]$config.runtimeOptions.includedFrameworks
-if (!$selfContained -and !$AllowFrameworkDependent) { throw 'Package is framework-dependent; explicit -AllowFrameworkDependent is required' }
+$payloadInfo = & (Join-Path $PSScriptRoot 'Test-PublishPayload.ps1') -PayloadPath $VerificationRoot -AllowFrameworkDependent:$AllowFrameworkDependent
+$selfContained = $payloadInfo.SelfContained
 if ($selfContained) {
-    if ($config.runtimeOptions.framework -or $config.runtimeOptions.frameworks) { throw 'Ambiguous runtime configuration' }
-    foreach ($framework in $config.runtimeOptions.includedFrameworks) {
+    foreach ($framework in $payloadInfo.Frameworks) {
         $notices = Join-Path (Join-Path $VerificationRoot 'licenses') (($framework.name + '.Runtime.win-x64').ToLowerInvariant() + '-' + $framework.version)
         if (!(Test-Path -LiteralPath $notices -PathType Container) -or !(Get-ChildItem -LiteralPath $notices -File)) { throw ('Missing bundled runtime notices: ' + $framework.name) }
     }
-    foreach ($name in @('coreclr.dll','hostfxr.dll','hostpolicy.dll','System.Private.CoreLib.dll','PresentationFramework.dll','System.Windows.Forms.dll')) {
-        if (!(Test-Path -LiteralPath (Join-Path $VerificationRoot $name) -PathType Leaf)) { throw ('Required runtime missing: ' + $name) }
-    }
-} elseif (!$config.runtimeOptions.framework -and !$config.runtimeOptions.frameworks) { throw 'Missing framework requirements' }
+}
 # No normal GUI launch: this explicit mode exits before profile, Run key, tray, mutex or tuning.
 $reportPath = $VerificationRoot + '-result.json'
 if (Test-Path -LiteralPath $reportPath) { throw ('Check result already exists: ' + $reportPath) }
+$tracePath = $VerificationRoot + '-host-trace.txt'
+if (Test-Path -LiteralPath $tracePath) { throw ('Host trace already exists: ' + $tracePath) }
 $start = New-Object Diagnostics.ProcessStartInfo
 $start.FileName = Join-Path $VerificationRoot 'CorePin.exe'
 $start.Arguments = '--package-check "' + $reportPath + '"'
@@ -60,10 +57,13 @@ $start.WorkingDirectory = $VerificationRoot
 $start.UseShellExecute = $false
 $start.CreateNoWindow = $true
 $start.WindowStyle = [Diagnostics.ProcessWindowStyle]::Hidden
+$start.EnvironmentVariables['DOTNET_HOST_TRACE'] = '1'
+$start.EnvironmentVariables['DOTNET_HOST_TRACEFILE'] = $tracePath
+$start.EnvironmentVariables['DOTNET_HOST_TRACE_VERBOSITY'] = '4'
 if ($selfContained) {
+    # A deliberately invalid root is only a guard. Loaded module paths below are the proof.
     $start.EnvironmentVariables['DOTNET_ROOT'] = Join-Path $VerificationRoot 'no-global-runtime'
     $start.EnvironmentVariables['DOTNET_ROOT_X64'] = $start.EnvironmentVariables['DOTNET_ROOT']
-    $start.EnvironmentVariables['DOTNET_MULTILEVEL_LOOKUP'] = '0'
 }
 $process = [Diagnostics.Process]::Start($start)
 try {
@@ -72,12 +72,23 @@ try {
 } finally { $process.Dispose() }
 $result = Get-Content -LiteralPath $reportPath -Raw -Encoding UTF8 | ConvertFrom-Json
 if ($result.Product -cne 'CorePin' -or $result.Architecture -cne 'X64' -or $result.LogicalProcessors -lt 1 -or $result.IconWidth -lt 1) { throw 'Invalid package check result' }
+if ($result.ExecutablePath -ine (Join-Path $VerificationRoot 'CorePin.exe')) { throw 'Unexpected executable path' }
+if (!(Test-Path -LiteralPath $tracePath -PathType Leaf) -or (Get-Item -LiteralPath $tracePath).Length -eq 0) { throw 'Missing documented host trace' }
 if ($selfContained) {
-    foreach ($path in @($result.RuntimeAssemblyPath,$result.DesktopAssemblyPath,$result.FormsAssemblyPath)) {
+    foreach ($path in @($result.RuntimeAssemblyPath,$result.WindowsBaseAssemblyPath,$result.PresentationCoreAssemblyPath,$result.DesktopAssemblyPath,$result.FormsAssemblyPath)) {
+        if (!$path) { throw 'Missing loaded managed assembly evidence' }
         if (![IO.Path]::GetFullPath($path).StartsWith($VerificationRoot + '\', [StringComparison]::OrdinalIgnoreCase)) { throw ('Runtime was loaded outside the package: ' + $path) }
     }
+    foreach ($name in @('hostfxr.dll','hostpolicy.dll','coreclr.dll','wpfgfx_cor3.dll','PresentationNative_cor3.dll')) {
+        $modules = @($result.NativeModules | Where-Object Name -IEQ $name)
+        if ($modules.Count -ne 1 -or $modules[0].Path -ine (Join-Path $VerificationRoot $name)) { throw ('Missing package-local loaded native module: ' + $name) }
+    }
+    $bundledRuntime = @($payloadInfo.Frameworks | Where-Object name -CEQ 'Microsoft.NETCore.App')[0].version
+    if ($result.Runtime -cne ('.NET ' + $bundledRuntime)) { throw ('Unexpected executing runtime: ' + $result.Runtime) }
+    Write-Output ('PACKAGE_RUNTIME_PROOF_OK: loaded hostfxr/hostpolicy/coreclr/WPF native modules and managed runtime/WPF/Forms from ' + $VerificationRoot)
 }
 $runtimeMode = if ($selfContained) { 'package-local runtime/WPF/Forms' } else { 'framework-dependent; installed .NET Desktop runtime required' }
 Write-Output ('PACKAGE_HASHES_OK: ' + $verified.Count + ' payload files and ZIP checksum')
 Write-Output ('PACKAGE_HEADLESS_OK: CorePin; ' + $runtimeMode + '; logical=' + $result.LogicalProcessors + '; icon=' + $result.IconWidth + 'x' + $result.IconHeight)
 Write-Output ('PACKAGE_CHECK_RESULT: ' + $reportPath)
+Write-Output ('PACKAGE_HOST_TRACE: ' + $tracePath)

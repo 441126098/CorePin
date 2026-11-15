@@ -12,14 +12,14 @@ permissions:
 jobs:
   checks:
     runs-on: windows-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: 10.0.x
       - name: Build Release
         run: dotnet build .\CorePin.sln -c Release --artifacts-path .\artifacts\ci-build
       - name: Managed checks
@@ -31,3 +31,16 @@ jobs:
         run: |
           & .\scripts\Check-Source.ps1
           & .\scripts\Test-Text.ps1
+      - name: Publish and verify default self-contained zip
+        shell: powershell
+        run: |
+          & .\scripts\Publish-Release.ps1
+          & .\scripts\Test-Package.ps1 -PackagePath .\artifacts\corepin-selfcontained\CorePin-win-x64.zip -VerificationRoot .\artifacts\ci-package-verify
+      - name: Retain runtime verification evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-verification
+          path: |
+            artifacts/ci-package-verify-result.json
+            artifacts/ci-package-verify-host-trace.txt
+          if-no-files-found: error

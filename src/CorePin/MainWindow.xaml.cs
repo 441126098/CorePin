@@ -28,12 +28,16 @@ public partial class MainWindow : Window
     private readonly Dictionary<string, ProcessReport> _previous = new();
     private readonly List<CoreChip> _chips = new();
     private readonly DispatcherTimer _toastTimer = new() { Interval = TimeSpan.FromSeconds(4) };
+    private readonly DispatcherTimer _trayMemoryTimer = new() { Interval = TimeSpan.FromSeconds(2) };
+    // This private helper is called only with the fixed UI palette below.
+    private static readonly Dictionary<string, Brush> Palette = new(StringComparer.Ordinal);
     private CpuTopology? _topology;
     private ProcessWatcher? _watcher;
     private WatchSnapshot? _snapshot;
     private CpuRow? _inspected;
     private bool _ready, _exiting, _disposed, _closeExplained, _closingDialog;
     private string _lastWatchError = "", _lastBindingError = "";
+    private ProcessReport[] _bindingBannerReports = Array.Empty<ProcessReport>();
 
     public MainWindow()
     {
@@ -74,8 +78,22 @@ public partial class MainWindow : Window
         {
             _toastTimer.Stop();
             CoresToast.Visibility = TargetsToast.Visibility = Visibility.Collapsed;
-            FitContent();
         };
+        _trayMemoryTimer.Tick += (_, _) =>
+        {
+            _trayMemoryTimer.Stop();
+            if (_disposed || IsVisible) return;
+            // One collection/trim on entering the tray, never on a polling timer.
+            // Keep the visual tree and watcher alive so reopening is immediate.
+            GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true, compacting: true);
+            _ = Native.NativeMethods.EmptyWorkingSet(Native.NativeMethods.GetCurrentProcess());
+        };
+        IsVisibleChanged += (_, _) =>
+        {
+            _trayMemoryTimer.Stop();
+            if (!IsVisible && !_disposed) _trayMemoryTimer.Start();
+        };
+        _trayMemoryTimer.Start(); // Also covers --tray, which has never been visible.
         _ready = true;
         // Elevation is shown before the first watcher result, even with no running game.
         UpdateMainStatus();
@@ -86,12 +104,7 @@ public partial class MainWindow : Window
 
     private void Window_SourceInitialized(object? sender, EventArgs e)
     {
-        MaxHeight = SystemParameters.WorkArea.Height;
-        MainScroll.MaxHeight = Math.Max(250, MaxHeight - 100);
-        StateChanged += (_, _) =>
-        {
-            MainScroll.MaxHeight = WindowState == WindowState.Maximized ? double.PositiveInfinity : Math.Max(250, MaxHeight - 100);
-        };
+        MaxHeight = Math.Max(MinHeight, SystemParameters.WorkArea.Height);
     }
 
     private void LoadTopology()
@@ -118,6 +131,7 @@ public partial class MainWindow : Window
             }
             _inspected = null;
             CoreDetail.Visibility = Visibility.Collapsed;
+            CoreHint.Visibility = Visibility.Visible;
             DrawCoreMap();
             ApplyButton.IsEnabled = AutoPinBox.IsEnabled = _autoMenu.Enabled = true;
             if (_watcher == null)
@@ -140,6 +154,7 @@ public partial class MainWindow : Window
             PerformanceTitle.Text = "处理器拓扑暂不可用";
             EfficiencySection.Visibility = Visibility.Collapsed;
             CoreDetail.Visibility = Visibility.Collapsed;
+            CoreHint.Visibility = Visibility.Visible;
             ApplyButton.IsEnabled = AutoPinBox.IsEnabled = _autoMenu.Enabled = false;
             ShowError("无法读取处理器配置。请在技术详情中刷新拓扑。");
             CheckText.Text = ErrorText.Describe(ex);
@@ -177,8 +192,7 @@ public partial class MainWindow : Window
                 body.Children.Add(new TextBlock
                 {
                     Text = _topology.GroupCount > 1 ? $"G{group.Group} 核心 {group.Index}" : $"核心 {group.Index}",
-                    FontSize = 9, Foreground = Brush("#A77A08"), HorizontalAlignment = HorizontalAlignment.Center,
-                    Margin = new Thickness(0, 0, 0, 2)
+                    FontSize = 9, Height = 12, Foreground = Brush("#A77A08"), HorizontalAlignment = HorizontalAlignment.Center
                 });
             var siblings = new StackPanel { Orientation = Orientation.Horizontal };
             foreach (var cpu in group.Threads)
@@ -196,23 +210,22 @@ public partial class MainWindow : Window
                 BorderBrush = group.IsPerformance ? Brush("#FFF0C2") : Brushes.Transparent,
                 Background = group.IsPerformance ? Brush("#FFFAEB") : Brushes.Transparent,
                 BorderThickness = new Thickness(group.IsPerformance ? 1 : 0),
-                Padding = new Thickness(0, group.IsPerformance ? 1 : 0, 0, group.IsPerformance ? 3 : 0),
-                Margin = new Thickness(0, 0, 2, 3)
+                Padding = new Thickness(0),
+                Margin = new Thickness(0, 0, 6, 0),
+                HorizontalAlignment = HorizontalAlignment.Left
             };
             (group.IsPerformance ? PerformanceMap : EfficiencyMap).Children.Add(surface);
         }
-        FitContent();
     }
 
     private void InspectCore(CpuRow row)
     {
         _inspected = row;
         CoreDetail.Visibility = Visibility.Visible;
-        CoreDetailTitle.Text = $"{(row.IsPerformance ? "性能核" : "能效核")} · {row.Cpu.LogicalLabel}";
-        CoreDetailText.Text = $"物理核心：{row.Cpu.CoreIndex}（处理器组 {row.Cpu.Group}）   逻辑编号：{row.Cpu.LogicalIndex}\n" +
-            $"EfficiencyClass：{row.Cpu.EfficiencyClass}   CPU Set ID：{row.Cpu.Id}\n" +
-            $"可用状态：{row.Cpu.Availability}   {(row.Selected ? "已纳入策略" : "未纳入策略")}（保存后生效）";
-        FitContent();
+        CoreHint.Visibility = Visibility.Collapsed;
+        CoreDetailTitle.Text = $"{row.Cpu.LogicalLabel} · {(row.IsPerformance ? "性能核" : "能效核")} · {(row.Selected ? "已纳入策略" : "未纳入策略")}（保存后生效）";
+        CoreDetailText.Text = $"物理核心：{row.Cpu.CoreIndex}（处理器组 {row.Cpu.Group}）   逻辑编号：{row.Cpu.LogicalIndex}   EfficiencyClass：{row.Cpu.EfficiencyClass}   CPU Set ID：{row.Cpu.Id}\n" +
+            $"可用状态：{row.Cpu.Availability}。" + (row.IsPerformance ? "推荐将同一物理核心的线程一并纳入。" : "能效核默认不纳入；可按需要手动选择。");
     }
 
     private void UpdatePolicy()
@@ -259,7 +272,7 @@ public partial class MainWindow : Window
                 _vm.Status = $"已绑定到 {count} 个{(allPerformance ? "性能核" : "逻辑处理器")}";
                 bool onlyGame = TargetRule.EnabledNames(_settings.Targets).SetEquals(new[] { GameName });
                 bool recommended = SelectedCpus().Select(c => c.Id).Order().SequenceEqual(_topology.Recommended.Select(c => c.Id).Order());
-                _vm.Summary = (onlyGame ? "只监视游戏，不监视客户端" : "按监视列表监视已启用的进程") + "\n" +
+                _vm.Summary = (onlyGame ? "只监视游戏，不监视客户端" : "按监视列表监视已启用的进程") + "  ·  " +
                     (recommended ? $"使用全部 {count} 个性能核" : $"使用 {count} 个自定义逻辑处理器");
                 color = "#0F7A5A"; tint = "#E6F4ED"; glyph = "✓";
             }
@@ -267,7 +280,7 @@ public partial class MainWindow : Window
             {
                 _vm.Status = _settings.AutoPin ? "绑定需要处理" : "自动绑定已暂停";
                 _vm.Summary = !_settings.AutoPin ? "当前仅监视游戏。开启自动绑定，或点击立即应用。" :
-                    games.Any(p => p.Detail.Length > 0) ? BindingFailure(games.First(p => p.Detail.Length > 0).Detail) : "正在应用核心策略，请稍候。";
+                    games.Any(p => p.Detail.Length > 0) ? ProcessFeedback.FailureText(games.First(p => p.Detail.Length > 0).Detail, _elevated) : "正在应用核心策略，请稍候。";
                 color = "#925A0C"; tint = "#FFF5E3"; glyph = "!";
             }
         }
@@ -277,19 +290,19 @@ public partial class MainWindow : Window
             string policy = _settings.UseManualSelection ? "核心策略已就绪" : "推荐策略已就绪";
             string selection = SelectedCpus().All(c => c.EfficiencyClass == _topology.HighestClass) ? $"{count} 个性能核" : $"{count} 个逻辑处理器";
             _vm.Summary = _settings.AutoPin
-                ? $"{policy}，自动绑定已开启。\n打开游戏后会自动绑定到 {selection}。"
-                : $"{policy}，自动绑定已暂停。\n打开游戏后可点击立即应用。";
+                ? $"{policy}，自动绑定已开启。打开游戏后会自动绑定到 {selection}。"
+                : $"{policy}，自动绑定已暂停。打开游戏后可点击立即应用。";
         }
         StatusStripe.Background = StatusCircle.BorderBrush = StatusGlyph.Foreground = Brush(color);
         StatusCircle.Background = Brush(tint);
         StatusGlyph.Text = glyph;
+        bool neutral = color == "#4B5E89";
+        SummarySlot.Background = Brush(neutral ? "#F3F4F7" : tint);
+        SummarySlot.BorderBrush = Brush(neutral ? "#DFE3EB" : color == "#0F7A5A" ? "#A2D5BD" : "#E7CC99");
+        SummaryText.Foreground = Brush(neutral ? "#5E6879" : color);
         string tooltip = "CorePin · " + _vm.Status;
         _tray.Text = tooltip.Length <= 63 ? tooltip : tooltip[..63];
     }
-
-    private string BindingFailure(string detail) => detail.Contains("访问被拒绝", StringComparison.Ordinal)
-        ? _elevated ? "无法应用绑定。进程保护或反作弊仍可能阻止访问，请查看技术详情。" : "无法应用绑定。需要管理员权限。"
-        : "无法应用绑定。请查看技术详情中的原因后重试。";
 
     private void Watcher_Updated(WatchSnapshot snapshot)
     {
@@ -300,6 +313,21 @@ public partial class MainWindow : Window
     private void UpdateSnapshot(WatchSnapshot snapshot)
     {
         if (_disposed || _watcher == null) return;
+        var feedback = ProcessFeedback.Evaluate(snapshot.Processes, _previous, _lastBindingError,
+            _elevated, _settings.AutoPin, snapshot.AppliedManually);
+        if (snapshot.Error.Length == 0 && ProcessFeedback.ShouldDismissBanner(_bindingBannerReports, snapshot.Processes))
+            DismissError();
+        // An inspection can race with exit after the watcher's process enumeration.
+        // Remove that stale entry and use the same exit lifecycle as the next poll.
+        if (snapshot.Processes.Any(ProcessFeedback.IsExit))
+        {
+            int exitedGames = snapshot.Processes.Count(p => ProcessFeedback.IsExit(p) && p.Name.Equals(GameName, StringComparison.OrdinalIgnoreCase));
+            snapshot = snapshot with
+            {
+                Processes = snapshot.Processes.Where(p => !ProcessFeedback.IsExit(p)).ToArray(),
+                GameProcessCount = Math.Max(0, snapshot.GameProcessCount - exitedGames)
+            };
+        }
         _snapshot = snapshot;
         CheckText.Text = $"最近检查 {snapshot.Time:HH:mm:ss} · {(_elevated ? "管理员" : "普通用户")}\n每 500ms 检查并重新应用" +
             (_topology?.GroupCount > 1 ? " · 跨组 CPU Sets（软亲和性）" : " · CPU Sets + 亲和性") +
@@ -317,23 +345,24 @@ public partial class MainWindow : Window
             if (report.IsCompliant && (!known || !old!.IsCompliant))
                 AddLog($"已将{(report.Name.Equals(GameName, StringComparison.OrdinalIgnoreCase) ? "游戏" : report.Name)}绑定到 {SelectedCpus().Length} 个{(SelectedCpus().All(c => c.EfficiencyClass == _topology!.HighestClass) ? "性能核" : "逻辑处理器")}。");
             else if (report.IsCompliant && report.Changed) AddLog("检测到处理器分配变化，已重新应用核心策略。");
-            else if (!report.IsCompliant && report.Detail.Length > 0 && (!known || old!.Detail != report.Detail))
-                AddLog(BindingFailure(report.Detail));
         }
-        foreach (var ended in _previous.Values.Where(p => !snapshot.Processes.Any(n => n.Identity == p.Identity)))
-            AddLog(ended.Name.Equals(GameName, StringComparison.OrdinalIgnoreCase) ? "游戏已退出，继续等待下一次启动。" : $"{ended.Name} 已退出或不再监视。");
+        foreach (string message in ProcessFeedback.ExitLogs(_previous.Values, snapshot.Processes)) AddLog(message);
+        foreach (string message in feedback.Logs) AddLog(message);
         _previous.Clear();
         foreach (var report in snapshot.Processes) _previous[report.Identity] = report;
         if (snapshot.Error.Length > 0 && snapshot.Error != _lastWatchError) ShowError("暂时无法检查游戏进程，将自动重试。请查看技术详情。");
         _lastWatchError = snapshot.Error;
-        string failure = string.Join("|", snapshot.Processes.Where(p => !p.IsCompliant).Select(p => p.Detail).Where(d => d.Length > 0));
-        if (failure.Length > 0 && failure != _lastBindingError && _settings.AutoPin) ShowError(BindingFailure(failure), !_elevated);
-        _lastBindingError = failure;
+        if (feedback.Banner.Length > 0)
+        {
+            ShowError(feedback.Banner, !_elevated, log: false);
+            _bindingBannerReports = snapshot.Processes.Where(p => !p.IsCompliant &&
+                (snapshot.AppliedManually || p.Detail.Length > 0)).ToArray();
+        }
+        _lastBindingError = feedback.Failure;
         if (snapshot.AppliedManually)
         {
             if (snapshot.Processes.Length == 0) ShowToast("当前未检测到目标进程，策略已就绪。");
             else if (snapshot.Processes.All(p => p.IsCompliant)) ShowToast("核心策略已应用。");
-            else ShowError(BindingFailure(failure), !_elevated);
         }
         UpdateMainStatus();
     }
@@ -407,7 +436,6 @@ public partial class MainWindow : Window
     private void RemoveTarget_Click(object sender, RoutedEventArgs e)
     {
         if (sender is Button { Tag: TargetRule rule }) _vm.Targets.Remove(rule);
-        FitContent();
     }
     private void Discover_Click(object sender, RoutedEventArgs e)
     {
@@ -454,52 +482,53 @@ public partial class MainWindow : Window
         bool open = panel.Visibility != Visibility.Visible;
         ProgramsPanel.Visibility = LogsPanel.Visibility = Visibility.Collapsed;
         if (open) panel.Visibility = Visibility.Visible;
+        DefaultPanel.Visibility = open ? Visibility.Collapsed : Visibility.Visible;
         ProgramsButton.Tag = ProgramsPanel.Visibility == Visibility.Visible ? "Open" : null;
         LogsButton.Tag = LogsPanel.Visibility == Visibility.Visible ? "Open" : null;
-        FitContent();
     }
     private void Technical_Click(object sender, RoutedEventArgs e)
     {
-        TechnicalPanel.Visibility = TechnicalPanel.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible;
-        FitContent();
+        TechnicalPopup.IsOpen = !TechnicalPopup.IsOpen;
     }
+    private void CloseTechnical_Click(object sender, RoutedEventArgs e) => TechnicalPopup.IsOpen = false;
     private void Numbers_Changed(object sender, RoutedEventArgs e)
     {
         foreach (var chip in _chips) chip.ShowNumbers(NumbersBox.IsChecked == true);
-        FitContent();
     }
     private void CloseCoreDetail_Click(object sender, RoutedEventArgs e)
     {
         _inspected = null;
         CoreDetail.Visibility = Visibility.Collapsed;
-        FitContent();
+        CoreHint.Visibility = Visibility.Visible;
     }
-    private void FitContent()
+    private void ShowError(string text, bool offerElevation = false, bool log = true)
     {
-        if (!_ready || WindowState != WindowState.Normal) return;
-        SizeToContent = SizeToContent.Height;
-    }
-    private void ShowError(string text, bool offerElevation = false)
-    {
-        ErrorTextBlock.Text = text;
+        _bindingBannerReports = Array.Empty<ProcessReport>();
+        ErrorTextBlock.Text = text.Replace("（Win32 5）", "", StringComparison.Ordinal);
         ErrorElevateButton.Visibility = offerElevation && !_elevated ? Visibility.Visible : Visibility.Collapsed;
         ErrorBar.Visibility = Visibility.Visible;
-        AddLog(text);
-        FitContent();
+        SummarySlot.Visibility = Visibility.Collapsed;
+        if (log) AddLog(text);
     }
-    private void DismissError_Click(object sender, RoutedEventArgs e) { ErrorBar.Visibility = Visibility.Collapsed; FitContent(); }
+    private void DismissError()
+    {
+        _bindingBannerReports = Array.Empty<ProcessReport>();
+        ErrorBar.Visibility = Visibility.Collapsed;
+        SummarySlot.Visibility = Visibility.Visible;
+    }
+    private void DismissError_Click(object sender, RoutedEventArgs e) => DismissError();
     private void ShowToast(string text, bool targets = false)
     {
+        CoresToast.Visibility = TargetsToast.Visibility = Visibility.Collapsed;
         if (targets) { TargetsToastText.Text = text; TargetsToast.Visibility = Visibility.Visible; }
         else { CoresToastText.Text = text; CoresToast.Visibility = Visibility.Visible; }
         _toastTimer.Stop();
         _toastTimer.Start();
         AddLog(text);
-        FitContent();
     }
     private void AddLog(string text)
     {
-        _vm.Logs.Insert(0, $"{DateTime.Now:HH:mm:ss}  {text}");
+        _vm.Logs.Insert(0, new LogEntry($"{DateTime.Now:HH:mm:ss}", text));
         while (_vm.Logs.Count > 250) _vm.Logs.RemoveAt(_vm.Logs.Count - 1);
     }
 
@@ -556,7 +585,16 @@ public partial class MainWindow : Window
         Hide();
     }
 
-    private static Brush Brush(string value) => (Brush)new BrushConverter().ConvertFromString(value)!;
+    private static Brush Brush(string value)
+    {
+        if (!Palette.TryGetValue(value, out var brush))
+        {
+            brush = (Brush)new BrushConverter().ConvertFromString(value)!;
+            brush.Freeze();
+            Palette.Add(value, brush);
+        }
+        return brush;
+    }
     private static System.Drawing.Icon? LoadAppIcon()
     {
         try
@@ -567,13 +605,19 @@ public partial class MainWindow : Window
         catch { }
         return null;
     }
-    private void ExitApplication() { _exiting = true; DisposeResources(); Application.Current.Shutdown(); }
+    private void ExitApplication() => ExitApplication(0);
+    private void ExitApplication(int exitCode) { _exiting = true; DisposeResources(); Application.Current.Shutdown(exitCode); }
+
+    // Opt-in release diagnostics use the same view and shutdown paths as the app.
+    internal void StartMemoryCheck(string output) => MemoryCheck.Run(output, this, ShowMain,
+        () => TogglePanel(ProgramsPanel), () => TogglePanel(LogsPanel), Hide, ExitApplication);
 
     internal void DisposeResources()
     {
         if (_disposed) return;
         _disposed = true;
         _toastTimer.Stop();
+        _trayMemoryTimer.Stop();
         if (_watcher != null) { _watcher.Updated -= Watcher_Updated; _watcher.Dispose(); }
         _tray.Visible = false;
         _tray.ContextMenuStrip?.Dispose();

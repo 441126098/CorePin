@@ -111,6 +111,21 @@ namespace CorePin.Native
         [DllImport("kernel32.dll", SetLastError = true)]
         internal static extern SafeKernelHandle CreateToolhelp32Snapshot(uint flags, uint processId);
 
+        [DllImport("kernel32.dll", EntryPoint = "Process32FirstW", ExactSpelling = true, SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static extern bool Process32FirstBuffer(SafeKernelHandle snapshot, IntPtr entry);
+
+        [DllImport("kernel32.dll", EntryPoint = "Process32NextW", ExactSpelling = true, SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static extern bool Process32NextBuffer(SafeKernelHandle snapshot, IntPtr entry);
+
+        [DllImport("kernel32.dll")]
+        internal static extern IntPtr GetCurrentProcess();
+
+        [DllImport("kernel32.dll", EntryPoint = "K32EmptyWorkingSet")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static extern bool EmptyWorkingSet(IntPtr process);
+
         [DllImport("kernel32.dll", EntryPoint = "Process32FirstW", CharSet = CharSet.Unicode, SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         internal static extern bool Process32First(SafeKernelHandle snapshot, ref ProcessEntry entry);

@@ -15,6 +15,7 @@ public partial class CoreChip : UserControl
         ShowNumbers(numbers);
         ToolTip = $"物理核心 {row.Cpu.CoreIndex} · {row.Cpu.LogicalLabel} · {row.Cpu.Availability}";
     }
-    public void ShowNumbers(bool show) => Number.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+    // Hidden reserves the number row; toggling labels never moves the map or detail slot.
+    public void ShowNumbers(bool show) => Number.Visibility = show ? Visibility.Visible : Visibility.Hidden;
     private void Chip_Click(object sender, RoutedEventArgs e) => Inspected?.Invoke((CpuRow)DataContext);
 }

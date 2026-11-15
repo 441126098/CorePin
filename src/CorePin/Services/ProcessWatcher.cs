@@ -50,6 +50,8 @@ public sealed class ProcessWatcher : IDisposable
     private async Task RunAsync()
     {
         var tuner = new ProcessTuner();
+        WatchConfiguration? previousConfiguration = null;
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         while (!_stop.IsCancellationRequested)
         {
             WatchConfiguration config;
@@ -62,12 +64,15 @@ public sealed class ProcessWatcher : IDisposable
             }
             try
             {
-                var names = new HashSet<string>(config.Names, StringComparer.OrdinalIgnoreCase);
-                var all = ProcessCatalog.Enumerate();
-                var targets = all.Where(p => names.Contains(p.Name) && (_onlyProcessId == null || p.Id == _onlyProcessId));
+                if (!ReferenceEquals(config, previousConfiguration))
+                {
+                    names.Clear();
+                    names.UnionWith(config.Names);
+                    previousConfiguration = config;
+                }
+                var targets = ProcessCatalog.FindTargets(names, _onlyProcessId, out int gameCount);
                 var results = targets.Select(p => tuner.Inspect(p, config.Topology, config.Selected, config.AutoPin || manual)).ToArray();
-                Updated?.Invoke(new WatchSnapshot(DateTime.Now, results,
-                    all.Count(p => p.Name.Equals("League of Legends.exe", StringComparison.OrdinalIgnoreCase)), "", manual));
+                Updated?.Invoke(new WatchSnapshot(DateTime.Now, results, gameCount, "", manual));
             }
             catch (Exception ex) { Updated?.Invoke(new WatchSnapshot(DateTime.Now, Array.Empty<ProcessReport>(), 0, ErrorText.Describe(ex), manual)); }
             try { await _wake.WaitAsync(500, _stop.Token).ConfigureAwait(false); }
